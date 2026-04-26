@@ -227,7 +227,7 @@ def main():
         sys.exit(1)
 
     our_key = topo.get("our_public_key", "unknown")
-    peers   = topo.get("peers", [])
+    peers   = topo.get("peers") or []
     logging.info("Our peer ID: %s...%s", our_key[:8], our_key[-8:])
     logging.info("Discovered %d direct peer(s)", len(peers))
 
