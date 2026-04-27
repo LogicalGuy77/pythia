@@ -10,7 +10,14 @@ const MIN_VERIFIED_PEERS = parseInt(process.env.MIN_VERIFIED_PEERS ?? "2", 10);
 let _client = null;
 function getClient() {
     if (!_client) {
-        _client = new DelphiClient();
+        const rawPrivateKey = process.env.WALLET_PRIVATE_KEY?.trim();
+        const privateKey = rawPrivateKey
+            ? (rawPrivateKey.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey}`)
+            : undefined;
+        _client = new DelphiClient({
+            signerType: process.env.DELPHI_SIGNER_TYPE === "private_key" ? "private_key" : undefined,
+            privateKey: privateKey,
+        });
     }
     return _client;
 }
@@ -63,6 +70,83 @@ app.get("/markets/:id", requireEnv, async (req, res) => {
         res.status(500).json({ error: msg });
     }
 });
+// GET /wallet — read-only wallet/balance check
+app.get("/wallet", requireEnv, async (_req, res) => {
+    try {
+        const client = getClient();
+        const signer = await client.getSigner();
+        const ethBalance = await client.getEthBalance();
+        const tokenBalance = await client.getErc20BalanceWithDecimals();
+        const positions = await client.listPositions({ wallet: signer.address });
+        res.json({
+            address: signer.address,
+            network: process.env.DELPHI_NETWORK ?? "testnet",
+            eth: {
+                wei: ethBalance.toString(),
+                ether: (Number(ethBalance) / 1e18).toFixed(8),
+            },
+            token: {
+                raw: tokenBalance.balance.toString(),
+                decimals: tokenBalance.decimals,
+                formatted: (Number(tokenBalance.balance) / 10 ** tokenBalance.decimals).toString(),
+            },
+            positionsCount: positions.positions?.length ?? 0,
+        });
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: msg });
+    }
+});
+// POST /quote — read-only quote for a prospective buy
+// Body: { market_id, outcome_index, amount_usdc }
+app.post("/quote", requireEnv, async (req, res) => {
+    const body = req.body;
+    if (!body.market_id || typeof body.market_id !== "string") {
+        res.status(400).json({ error: "market_id is required and must be a string" });
+        return;
+    }
+    if (body.outcome_index === undefined || ![0, 1].includes(body.outcome_index)) {
+        res.status(400).json({ error: "outcome_index must be 0 (YES) or 1 (NO)" });
+        return;
+    }
+    if (!body.amount_usdc || body.amount_usdc <= 0) {
+        res.status(400).json({ error: "amount_usdc must be a positive number" });
+        return;
+    }
+    try {
+        const client = getClient();
+        const result = await client.listMarkets({ status: "open" });
+        const markets = result?.markets || [];
+        const market = markets.find((m) => m.id === body.market_id || m.implementation === body.market_id);
+        if (!market) {
+            res.status(404).json({ error: `Market '${body.market_id}' not found or not open` });
+            return;
+        }
+        const marketAddress = market.id;
+        const sharesOut = BigInt(Math.round(body.amount_usdc * 1e18));
+        const maxTokensIn = BigInt(Math.round(body.amount_usdc * 1.2 * 1e6));
+        const quote = await client.quoteBuy({
+            marketAddress,
+            outcomeIdx: body.outcome_index,
+            sharesOut,
+        });
+        res.json({
+            marketId: market.id,
+            marketAddress,
+            outcomeIdx: body.outcome_index,
+            sharesOut: sharesOut.toString(),
+            quotedTokensIn: quote.tokensIn.toString(),
+            maxTokensIn: maxTokensIn.toString(),
+            quotedUsdc: Number(quote.tokensIn) / 1e6,
+            maxUsdc: Number(maxTokensIn) / 1e6,
+        });
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: msg });
+    }
+});
 // POST /trade — execute a prediction market buy
 // Body: { market_id, outcome_index, amount_usdc, verified_receipts[] }
 app.post("/trade", requireEnv, async (req, res) => {
@@ -103,19 +187,34 @@ app.post("/trade", requireEnv, async (req, res) => {
             res.status(404).json({ error: `Market '${body.market_id}' not found or not open` });
             return;
         }
-        const marketAddress = market.implementation;
-        // 2. Approve token spend (idempotent — safe to call on every trade)
-        console.log(`[trade] Approving token spend for market ${marketAddress}...`);
-        await client.approveToken({ marketAddress });
-        // 3. Convert amount to on-chain units
+        const marketAddress = market.id;
+        // 2. Convert amount to on-chain units
         //    sharesOut uses 18 decimals; maxTokensIn uses USDC 6 decimals + 20% slippage buffer
         const sharesOut = BigInt(Math.round(body.amount_usdc * 1e18));
         const maxTokensIn = BigInt(Math.round(body.amount_usdc * 1.2 * 1e6));
+        // 3. Refuse before spending gas if the wallet cannot cover the max spend.
+        const tokenBalance = await client.getErc20BalanceWithDecimals();
+        if (tokenBalance.balance < maxTokensIn) {
+            res.status(422).json({
+                error: `Insufficient Delphi token balance: have ${tokenBalance.balance.toString()} ` +
+                    `raw units, need at least ${maxTokensIn.toString()} raw units.`,
+                tokenDecimals: tokenBalance.decimals,
+            });
+            return;
+        }
+        // 4. Ensure only the needed token spend is approved. This avoids repeated
+        // approvals and does not grant unlimited allowance.
+        console.log(`[trade] Ensuring token approval for market ${marketAddress}...`);
+        await client.ensureTokenApproval({
+            marketAddress,
+            minimumAmount: maxTokensIn,
+            approveAmount: maxTokensIn,
+        });
         const outcomeLabel = body.outcome_index === 0 ? "YES" : "NO";
         console.log(`[trade] Buying ${outcomeLabel} shares — ` +
             `sharesOut=${sharesOut}  maxTokensIn=${maxTokensIn}  ` +
             `market=${marketAddress}`);
-        // 4. Buy shares
+        // 5. Buy shares
         const { transactionHash } = await client.buyShares({
             marketAddress,
             outcomeIdx: body.outcome_index,

@@ -22,6 +22,9 @@ from typing import Optional
 import requests
 
 
+DELPHI_TRADE_TIMEOUT_SECONDS = 300
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -202,7 +205,10 @@ def call_delphi_trade(
         "verified_receipts": verified_receipts,
     }
     try:
-        resp = requests.post(url, json=payload, timeout=60)
+        # On testnet this call can include both approval and buy transactions.
+        # Waiting for mining/finality can exceed 60s even though the bridge is
+        # still healthy and the transaction eventually succeeds.
+        resp = requests.post(url, json=payload, timeout=DELPHI_TRADE_TIMEOUT_SECONDS)
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
