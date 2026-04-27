@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -85,7 +86,7 @@ def run_ree_inference(
             cmd,
             capture_output=True,
             text=True,
-            timeout=300,  # 5-min timeout; first run downloads model
+            timeout=1800,  # 30-min timeout; first run downloads Docker image + model
         )
     except subprocess.TimeoutExpired:
         raise RuntimeError("REE inference timed out after 300s")
@@ -93,9 +94,13 @@ def run_ree_inference(
         raise RuntimeError(f"REE script not found at: {ree_path}")
 
     if result.returncode != 0:
+        # Surface both streams because shell wrappers and Docker may split
+        # useful failure details across stdout/stderr.
+        logging.error("REE stdout: %s", result.stdout)
         logging.error("REE stderr: %s", result.stderr)
+        combined = (result.stderr or "") + (result.stdout or "")
         raise RuntimeError(
-            f"REE exited with code {result.returncode}: {result.stderr[:500]}"
+            f"REE exited with code {result.returncode}: {combined[-500:].strip()}"
         )
 
     logging.debug("REE stdout: %s", result.stdout[:1000])
@@ -107,7 +112,8 @@ def run_ree_inference(
             f"~/.cache/gensyn/ for model '{model_name}'"
         )
 
-    text_output = receipt.get("text_output", "")
+    output = receipt.get("output", {})
+    text_output = receipt.get("text_output") or output.get("text_output", "")
     return text_output, receipt
 
 
@@ -119,9 +125,10 @@ def _find_latest_receipt(model_name: str, after_timestamp: float) -> Optional[di
     """
     cache_base = Path.home() / ".cache" / "gensyn"
 
-    # model_name may contain "/" (e.g. "Qwen/Qwen2.5-3B") which pathlib
-    # treats as a relative sub-path — giving us the correct nested dir.
-    model_cache = cache_base / model_name
+    # REE encodes model names with "--" instead of "/" in the cache dir
+    # e.g. "Qwen/Qwen2.5-3B" -> "Qwen--Qwen2.5-3B"
+    model_dir = model_name.replace("/", "--")
+    model_cache = cache_base / model_dir
     pattern = str(model_cache / "**" / "receipt_*.json")
     candidates = glob.glob(pattern, recursive=True)
 
@@ -235,10 +242,11 @@ def create_flask_app(ree_path: str, model_name: str, max_new_tokens: int) -> Fla
 
 
 def _rpc_error(req_id, code: int, message: str):
+    # AXL's RouterResponse.error must be a plain string, not an object
     return jsonify({
         "jsonrpc": "2.0",
         "id": req_id,
-        "error": {"code": code, "message": message}
+        "error": f"{code}: {message}"
     })
 
 
@@ -308,6 +316,23 @@ def deregister_from_mcp_router(router_port: int):
 
 
 # ---------------------------------------------------------------------------
+# Local server preflight
+# ---------------------------------------------------------------------------
+
+def ensure_port_available(host: str, port: int):
+    """Fail before MCP registration if the Flask port is already occupied."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((host, port))
+        except OSError as e:
+            raise RuntimeError(
+                f"Inference port {host}:{port} is already in use. "
+                "Stop the old node process or choose a different node number."
+            ) from e
+
+
+# ---------------------------------------------------------------------------
 # Background /recv poll thread
 # ---------------------------------------------------------------------------
 
@@ -357,6 +382,12 @@ def main():
         "inference_port=%d  api_port=%d  router_port=%d  model=%s",
         args.inference_port, args.api_port, args.router_port, args.model_name,
     )
+
+    try:
+        ensure_port_available("127.0.0.1", args.inference_port)
+    except RuntimeError as e:
+        logging.error("%s", e)
+        sys.exit(1)
 
     # Register with AXL MCP router (retries until AXL is up)
     register_with_mcp_router(args.router_port, args.inference_port)

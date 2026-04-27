@@ -1,0 +1,8 @@
+{
+  "PrivateKeyPath": "axl/nodeN-private.pem",
+  "Peers": ["tls://BOOTSTRAP_IP:9001"],
+  "Listen": [],
+  "api_port": 9012,
+  "router_addr": "http://127.0.0.1",
+  "router_port": 9013
+}

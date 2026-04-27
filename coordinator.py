@@ -117,7 +117,12 @@ def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
     Write receipt to a temp file, run structural validate then full verify.
 
     Returns (success, detail_message).
-    Full verify re-runs Docker inference — can take several minutes.
+
+    Step 1 (validate): calls Docker directly to avoid ree.sh overhead
+    (docker pull, setfacl) since the 'ree' image is already tagged locally.
+    All SDK output goes to stdout; stderr only has the ACL warning noise.
+
+    Step 2 (verify): calls ree.sh for the full cryptographic re-run.
     """
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", delete=False, prefix="pythia_receipt_"
@@ -125,22 +130,46 @@ def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
         json.dump(receipt_dict, f)
         tmp_path = f.name
 
-    try:
-        # Step 1: structural validation via the same Dockerized REE wrapper.
-        validate = subprocess.run(
-            [ree_path, "validate", "--receipt-path", tmp_path],
-            capture_output=True, text=True, timeout=30,
-        )
-        if validate.returncode != 0:
-            return False, f"validate failed: {validate.stderr.strip()}"
+    # The receipt is bind-mounted into Docker and read by the non-root `gensyn`
+    # user. NamedTemporaryFile creates 0600 files, which the container cannot
+    # read even when the parent directory is mounted.
+    os.chmod(tmp_path, 0o644)
 
-        # Step 2: full cryptographic verify (re-runs Docker)
+    tmp_dir  = os.path.dirname(tmp_path)
+    tmp_base = os.path.basename(tmp_path)
+    home     = os.path.expanduser("~")
+
+    try:
+        # Step 1: structural validation via direct Docker (no ree.sh wrapper).
+        # ree.sh pipes all SDK output to stdout via sed; we capture stdout here.
+        validate = subprocess.run(
+            [
+                "docker", "run", "--rm",
+                "-e", "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True",
+                "-v", f"{tmp_dir}:/mnt/receipt-path:ro",
+                "-v", f"{home}/.cache:/home/gensyn/.cache",
+                "ree",
+                "validate",
+                "--receipt-path", f"/mnt/receipt-path/{tmp_base}",
+            ],
+            capture_output=True, text=True, timeout=60,
+        )
+        logging.debug("validate stdout: %s", validate.stdout[:500])
+        logging.debug("validate stderr: %s", validate.stderr[:200])
+        if validate.returncode != 0:
+            combined = (validate.stdout + "\n" + validate.stderr).strip()
+            return False, f"validate failed: {combined[:400]}"
+
+        # Step 2: full cryptographic verify (re-runs Docker inference via ree.sh).
         verify = subprocess.run(
             [ree_path, "verify", "--receipt-path", tmp_path],
-            capture_output=True, text=True, timeout=300,
+            capture_output=True, text=True, timeout=600,
         )
+        logging.debug("verify stdout: %s", verify.stdout[:500])
+        logging.debug("verify stderr: %s", verify.stderr[:200])
         if verify.returncode != 0:
-            return False, f"verify failed: {verify.stderr.strip()}"
+            combined = (verify.stdout + "\n" + verify.stderr).strip()
+            return False, f"verify failed: {combined[:400]}"
 
         return True, "OK"
 
