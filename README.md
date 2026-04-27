@@ -287,8 +287,11 @@ Open <http://localhost:5173>.
   with pulsing live dots, and an open-markets list (click to select).
 - **Run panel** — prompt textarea, trade amount, min-verified-peers, and a
   toggle for full REE re-run verification. While a run is in progress, a live
-  timeline streams every phase (`discover` → `inference` → `verify` →
-  `aggregate` → `trade`).
+  timeline streams every phase (`discover` → `research` → `inference` →
+  `verify` → `aggregate` → `trade`).
+- **Research Context card** — Exa search results fetched once by the dashboard
+  API, frozen into the prompt, and sent identically to every REE peer so the
+  model has current context without making REE depend on live web calls.
 - **Peer cards** — one per peer, showing the model output, the receipt hash,
   the verification result, and an expandable view of the full REE receipt JSON.
 - **Consensus gauge** — half-circle gauge with the aggregated probability and
@@ -300,16 +303,25 @@ Open <http://localhost:5173>.
 
 | Endpoint                | Purpose                                              |
 | ----------------------- | ---------------------------------------------------- |
-| `GET  /api/health`      | Aggregated AXL / REE / delphi_bridge status          |
+| `GET  /api/health`      | Aggregated AXL / REE / Exa / delphi_bridge status    |
 | `GET  /api/topology`    | AXL topology and peer list                           |
 | `GET  /api/markets`     | Proxy to delphi_bridge `GET /markets`                |
 | `GET  /api/wallet`      | Proxy to delphi_bridge `GET /wallet`                 |
 | `POST /api/quote`       | Proxy to delphi_bridge `POST /quote`                 |
 | `POST /api/run`         | SSE stream that orchestrates the full pipeline       |
 
-The `/api/run` SSE stream emits `status`, `topology`, `peer_started`,
-`peer_output`, `peer_verified`, `consensus`, `trade_decision`, `trade_result`,
-`done`, and `error` events.
+The `/api/run` SSE stream emits `status`, `topology`, `research`,
+`peer_started`, `peer_output`, `peer_verified`, `consensus`, `trade_decision`,
+`trade_result`, `done`, and `error` events.
+
+### Exa Search Context
+
+Qwen2.5-3B runs offline inside REE, so the dashboard API can optionally enrich
+each prompt with current web context from Exa before inference. Set either
+`EXA_API_KEY` or `VITE_EXA_SEARCH_API_KEY` in `dashboard/.env` (or pass
+`--exa-api-key` to `api_server.py`). The API fetches Exa results once per run,
+persists the source packet in SQLite run history, and includes the exact same
+source excerpts in the prompt sent to every peer.
 
 ---
 

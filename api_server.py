@@ -28,6 +28,7 @@ Endpoints:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -64,6 +65,10 @@ def parse_args() -> argparse.Namespace:
                    help="Minimum verified receipts required before trading (default: 2)")
     p.add_argument("--runs-db", default="./pythia_runs.sqlite3",
                    help="SQLite DB path for persisted dashboard runs")
+    p.add_argument("--exa-api-key", default=None,
+                   help="Exa API key for web research context")
+    p.add_argument("--exa-results", type=int, default=2,
+                   help="Number of Exa search results to include per run")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
@@ -73,6 +78,133 @@ def parse_args() -> argparse.Namespace:
 # CORS — allow Vite dev server to call this API in dev. Permissive on purpose;
 # this whole stack is local-only and never exposed publicly.
 # ---------------------------------------------------------------------------
+
+def _load_env_file(path: str) -> None:
+    """Load simple KEY=VALUE lines without adding a python-dotenv dependency."""
+    if not os.path.isfile(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+def _resolve_exa_api_key(explicit_key: Optional[str]) -> Optional[str]:
+    if explicit_key:
+        return explicit_key.strip()
+
+    # The user added the key to dashboard/.env because the dashboard owns the
+    # feature. Read it server-side so the browser does not need to call Exa.
+    _load_env_file(os.path.join(os.getcwd(), "dashboard", ".env"))
+    _load_env_file(os.path.join(os.getcwd(), ".env"))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    _load_env_file(os.path.join(script_dir, "dashboard", ".env"))
+    _load_env_file(os.path.join(script_dir, ".env"))
+    return (
+        os.getenv("EXA_API_KEY")
+        or os.getenv("VITE_EXA_SEARCH_API_KEY")
+        or None
+    )
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    text = " ".join((text or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
+def search_exa(query: str, api_key: Optional[str], *, num_results: int) -> dict:
+    """Fetch a compact, immutable evidence packet from Exa for this run."""
+    generated_at = datetime.now(timezone.utc).isoformat()
+    if not api_key:
+        return {
+            "ok": False,
+            "query": query,
+            "generatedAt": generated_at,
+            "results": [],
+            "error": "EXA_API_KEY or VITE_EXA_SEARCH_API_KEY is not configured.",
+        }
+
+    result_count = max(1, min(num_results, 5))
+    payload = {
+        "query": query,
+        "type": "auto",
+        "numResults": result_count,
+        "contents": {
+            "summary": {
+                # Force Exa to return a one-sentence summary instead of the
+                # default multi-paragraph bulleted analysis. Keeps prompt
+                # tokens manageable for an 8GB GPU running Qwen2.5-3B.
+                "query": "Summarize in exactly one short sentence.",
+            },
+        },
+    }
+    try:
+        resp = requests.post(
+            "https://api.exa.ai/search",
+            headers={
+                "x-api-key": api_key,
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+    except (requests.RequestException, ValueError) as e:
+        return {
+            "ok": False,
+            "query": query,
+            "generatedAt": generated_at,
+            "results": [],
+            "error": str(e),
+        }
+
+    results = []
+    for item in body.get("results", [])[:result_count]:
+        results.append({
+            "title": item.get("title") or item.get("url") or "Untitled source",
+            "url": item.get("url"),
+            "publishedDate": item.get("publishedDate"),
+            "author": item.get("author"),
+            "summary": item.get("summary") or "",
+        })
+
+    return {
+        "ok": True,
+        "query": query,
+        "generatedAt": generated_at,
+        "results": results,
+    }
+
+
+def build_research_prompt(user_prompt: str, research: dict) -> str:
+    """Freeze Exa evidence into the exact prompt every REE peer receives.
+
+    Only title + date are injected. URL and full summary are kept out of the
+    REE prompt entirely — they're persisted in the SQLite run history and
+    rendered in the dashboard Research Context card. This keeps the prefill
+    matmul small enough to fit on a 7.5GB GPU after Qwen2.5-3B is loaded.
+    """
+    if not research.get("ok") or not research.get("results"):
+        return user_prompt
+
+    lines = [f"Sources ({research.get('generatedAt', '')[:10]}):"]
+    for idx, item in enumerate(research.get("results", []), start=1):
+        date = item.get("publishedDate", "")[:10] if item.get("publishedDate") else ""
+        date_str = f" ({date})" if date else ""
+        lines.append(f"{idx}. {item.get('title')}{date_str}")
+
+    lines.extend(["", "Question:", user_prompt])
+    return "\n".join(lines)
+
 
 def _add_cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -90,6 +222,7 @@ def create_app(args: argparse.Namespace) -> Flask:
 
     ree_path = os.path.abspath(args.ree_path)
     run_store = RunStore(os.path.abspath(args.runs_db))
+    exa_api_key = _resolve_exa_api_key(args.exa_api_key)
 
     @app.after_request
     def _cors(resp):  # type: ignore[unused-ignore]
@@ -133,6 +266,11 @@ def create_app(args: argparse.Namespace) -> Flask:
         services["ree"] = {
             "ok": os.path.isfile(ree_path),
             "path": ree_path,
+        }
+        services["exa"] = {
+            "ok": bool(exa_api_key),
+            "provider": "exa",
+            "results": args.exa_results,
         }
 
         all_ok = all(s.get("ok") for s in services.values())
@@ -256,7 +394,7 @@ def create_app(args: argparse.Namespace) -> Flask:
             ev_queue.put(msg)
             try:
                 run_store.append_event(run_id=run_id, ts=ts, event=event, data=data)
-                if event in {"consensus", "trade_decision", "trade_result", "error"}:
+                if event in {"research", "consensus", "trade_decision", "trade_result", "error"}:
                     summary[event] = data
                 if event == "done":
                     ok = bool(data.get("ok")) if isinstance(data, dict) else False
@@ -281,6 +419,8 @@ def create_app(args: argparse.Namespace) -> Flask:
                     amount_usdc=amount_usdc,
                     min_verified=min_verified,
                     verify=verify,
+                    exa_api_key=exa_api_key,
+                    exa_results=args.exa_results,
                 )
             except Exception as exc:  # noqa: BLE001 — surface every error to UI
                 logging.exception("Run pipeline crashed")
@@ -330,6 +470,8 @@ def _run_pipeline(
     amount_usdc: float,
     min_verified: int,
     verify: bool,
+    exa_api_key: Optional[str],
+    exa_results: int,
 ) -> None:
     # Phase 1 — discovery
     emit("status", {
@@ -355,7 +497,17 @@ def _run_pipeline(
         emit("done", {"ok": False})
         return
 
-    # Phase 2 — inference fan-out (sequential to respect single-GPU memory)
+    # Phase 2 — Exa research. The fetched evidence is frozen into the prompt
+    # and sent identically to every peer, preserving REE reproducibility.
+    emit("status", {
+        "phase": "research",
+        "message": "Fetching current context from Exa…",
+    })
+    research = search_exa(prompt, exa_api_key, num_results=exa_results)
+    emit("research", research)
+    prompt_for_peers = build_research_prompt(prompt, research)
+
+    # Phase 3 — inference fan-out (sequential to respect single-GPU memory)
     emit("status", {
         "phase": "inference",
         "message": f"Fanning prompt to {len(peers)} peer(s)…",
@@ -373,7 +525,7 @@ def _run_pipeline(
         })
 
         try:
-            result = coord.call_peer_infer(axl_api_port, peer_id, prompt)
+            result = coord.call_peer_infer(axl_api_port, peer_id, prompt_for_peers)
         except RuntimeError as exc:
             emit("peer_output", {
                 "peerId": peer_id,

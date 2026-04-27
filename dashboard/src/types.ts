@@ -6,6 +6,7 @@ export interface Health {
     axl?: { ok: boolean; port: number; error?: string }
     delphi?: { ok: boolean; url: string; error?: string; data?: unknown }
     ree?: { ok: boolean; path: string }
+    exa?: { ok: boolean; provider: string; results: number; error?: string }
   }
 }
 
@@ -58,12 +59,29 @@ export interface MarketsResponse {
 export interface StatusEvent {
   phase:
     | 'discover'
+    | 'research'
     | 'inference'
     | 'verify'
     | 'aggregate'
     | 'trade'
   message: string
   peerId?: string
+}
+
+export interface ResearchResult {
+  title: string
+  url?: string
+  publishedDate?: string
+  author?: string
+  summary?: string
+}
+
+export interface ResearchEvent {
+  ok: boolean
+  query: string
+  generatedAt: string
+  results: ResearchResult[]
+  error?: string
 }
 
 export interface PeerStartedEvent {
@@ -133,6 +151,7 @@ export interface ErrorEvent {
 export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled'
 
 export interface PersistedRunSummary {
+  research?: ResearchEvent
   consensus?: ConsensusEvent
   trade_decision?: TradeDecisionEvent
   trade_result?: TradeResultEvent
@@ -171,6 +190,7 @@ export interface RunsResponse {
 export type RunEvent =
   | { event: 'status';         data: StatusEvent }
   | { event: 'topology';       data: Topology }
+  | { event: 'research';       data: ResearchEvent }
   | { event: 'peer_started';   data: PeerStartedEvent }
   | { event: 'peer_output';    data: PeerOutputEvent }
   | { event: 'peer_verified';  data: PeerVerifiedEvent }

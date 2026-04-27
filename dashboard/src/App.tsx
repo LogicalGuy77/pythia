@@ -12,6 +12,7 @@ import { PeerCard } from './components/PeerCard'
 import { Consensus } from './components/Consensus'
 import { Trade } from './components/Trade'
 import { PastRuns } from './components/PastRuns'
+import { ResearchContext } from './components/ResearchContext'
 
 const DEFAULT_PROMPT =
   'Will ETH be above $3000 at the end of 2025? Give a numeric probability percentage.'
@@ -256,6 +257,10 @@ function App() {
             timeline={runState.timeline}
             fatalError={runState.fatalError}
           />
+
+          {runState.research && (
+            <ResearchContext research={runState.research} />
+          )}
 
           {orderedPeers.length > 0 && (
             <section>

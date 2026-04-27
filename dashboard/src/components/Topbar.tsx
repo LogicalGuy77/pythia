@@ -81,6 +81,11 @@ export function Topbar({ health, network }: Props) {
           ok={health?.services.delphi?.ok}
           detail={health?.services.delphi?.error}
         />
+        <ServiceStatus
+          label="Exa"
+          ok={health?.services.exa?.ok}
+          detail={health?.services.exa?.error}
+        />
         {network && (
           <div className="status-pill">
             <span className="dot dot--brand"></span>

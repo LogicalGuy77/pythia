@@ -8,6 +8,7 @@ import type {
   PeerOutputEvent,
   PeerStartedEvent,
   PeerVerifiedEvent,
+  ResearchEvent,
   RunEvent,
   TradeDecisionEvent,
   TradeResultEvent,
@@ -40,6 +41,7 @@ export interface RunState {
   timeline: TimelineEntry[]
   peers: Record<string, PeerRunState>
   peerOrder: string[]
+  research: ResearchEvent | null
   consensus: ConsensusEvent | null
   tradeDecision: TradeDecisionEvent | null
   tradeResult: TradeResultEvent | null
@@ -52,6 +54,7 @@ export const initialRunState: RunState = {
   timeline: [],
   peers: {},
   peerOrder: [],
+  research: null,
   consensus: null,
   tradeDecision: null,
   tradeResult: null,
@@ -139,6 +142,7 @@ function applyEvent(state: RunState, ev: RunEvent, ts: number): RunState {
       const phase = ev.data.phase
       const labels: Record<string, string> = {
         discover:  'Discovering peers',
+        research:  'Researching current context',
         inference: 'Fanning prompt to peers',
         verify:    'Verifying receipt',
         aggregate: 'Aggregating consensus',
@@ -166,6 +170,21 @@ function applyEvent(state: RunState, ev: RunEvent, ts: number): RunState {
         title: `Discovered ${ev.data.peerCount} peer${ev.data.peerCount === 1 ? '' : 's'}`,
         detail: ev.data.peers.map((p) => p.publicKey.slice(0, 14) + '…').join('  ·  '),
       })
+    }
+
+    case 'research': {
+      const data = ev.data as ResearchEvent
+      return pushTimeline(
+        { ...state, research: data },
+        {
+          ts,
+          kind: data.ok ? 'brand' : 'warning',
+          title: data.ok
+            ? `Exa returned ${data.results.length} source${data.results.length === 1 ? '' : 's'}`
+            : 'Exa research unavailable',
+          detail: data.ok ? data.query : data.error,
+        },
+      )
     }
 
     case 'peer_started': {

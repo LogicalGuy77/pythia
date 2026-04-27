@@ -20,7 +20,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_PORT=$((9002 + NODE_NUM * 10))
 ROUTER_PORT=$((9003 + NODE_NUM * 10))
 INFERENCE_PORT=$((5001 + NODE_NUM * 10))
-MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-2000}"
+# The probability task only needs a short answer ("Probability: NN%" +
+# one short reasoning sentence). 256 tokens leaves more KV-cache headroom on
+# an 8GB GPU when the model and other GPU processes are already loaded.
+MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-256}"
 
 CONFIG_FILE="${SCRIPT_DIR}/axl/node${NODE_NUM}-config.json"
 PEM_FILE="${SCRIPT_DIR}/axl/node${NODE_NUM}-private.pem"
