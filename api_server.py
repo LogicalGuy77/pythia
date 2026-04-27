@@ -34,12 +34,14 @@ import os
 import queue
 import threading
 import time
+import uuid
 from typing import Any, Dict, Optional
 
 import requests
 from flask import Flask, Response, jsonify, request, stream_with_context
 
 import coordinator as coord
+from run_store import RunStore
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,8 @@ def parse_args() -> argparse.Namespace:
                    help="URL of the delphi_bridge Express server")
     p.add_argument("--min-verified-peers", type=int, default=2,
                    help="Minimum verified receipts required before trading (default: 2)")
+    p.add_argument("--runs-db", default="./pythia_runs.sqlite3",
+                   help="SQLite DB path for persisted dashboard runs")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
@@ -85,6 +89,7 @@ def create_app(args: argparse.Namespace) -> Flask:
     app = Flask(__name__)
 
     ree_path = os.path.abspath(args.ree_path)
+    run_store = RunStore(os.path.abspath(args.runs_db))
 
     @app.after_request
     def _cors(resp):  # type: ignore[unused-ignore]
@@ -193,6 +198,30 @@ def create_app(args: argparse.Namespace) -> Flask:
         return _bridge_post("/quote", body)
 
     # ------------------------------------------------------------------
+    # Persisted run history
+    # ------------------------------------------------------------------
+    @app.route("/api/runs", methods=["GET"])
+    def runs():
+        try:
+            limit = int(request.args.get("limit", "25"))
+        except ValueError:
+            limit = 25
+        return jsonify({"runs": run_store.list_runs(limit=limit)})
+
+    @app.route("/api/runs/<run_id>", methods=["GET"])
+    def run_detail(run_id: str):
+        saved = run_store.get_run(run_id)
+        if saved is None:
+            return jsonify({"error": "run not found"}), 404
+        return jsonify(saved)
+
+    @app.route("/api/runs/<run_id>", methods=["DELETE"])
+    def delete_run(run_id: str):
+        if not run_store.delete_run(run_id):
+            return jsonify({"error": "run not found"}), 404
+        return ("", 204)
+
+    # ------------------------------------------------------------------
     # SSE pipeline run
     # ------------------------------------------------------------------
     @app.route("/api/run", methods=["POST"])
@@ -207,11 +236,37 @@ def create_app(args: argparse.Namespace) -> Flask:
         amount_usdc = float(body.get("amount_usdc") or 0.05)
         min_verified = int(body.get("min_verified_peers") or args.min_verified_peers)
         verify = bool(body.get("verify", True))
+        run_id = uuid.uuid4().hex
+
+        run_store.create_run(
+            run_id=run_id,
+            prompt=prompt,
+            market_id=market_id,
+            amount_usdc=amount_usdc,
+            min_verified_peers=min_verified,
+            verify=verify,
+        )
 
         ev_queue: "queue.Queue[Optional[dict]]" = queue.Queue()
+        summary: Dict[str, Any] = {}
 
         def emit(event: str, data: Any) -> None:
-            ev_queue.put({"event": event, "data": data, "ts": time.time()})
+            ts = time.time()
+            msg = {"event": event, "data": data, "ts": ts}
+            ev_queue.put(msg)
+            try:
+                run_store.append_event(run_id=run_id, ts=ts, event=event, data=data)
+                if event in {"consensus", "trade_decision", "trade_result", "error"}:
+                    summary[event] = data
+                if event == "done":
+                    ok = bool(data.get("ok")) if isinstance(data, dict) else False
+                    status = "completed" if ok else "failed"
+                    summary["done"] = data
+                    run_store.update_run(run_id=run_id, status=status, summary=summary)
+                elif event == "error":
+                    run_store.update_run(run_id=run_id, status="failed", summary=summary)
+            except Exception:
+                logging.exception("Failed to persist run event")
 
         def worker() -> None:
             try:
@@ -242,11 +297,12 @@ def create_app(args: argparse.Namespace) -> Flask:
                 if msg is None:
                     break
                 payload = json.dumps(msg["data"], default=str)
-                yield f"event: {msg['event']}\ndata: {payload}\n\n"
+                yield f"id: {run_id}:{msg['ts']}\nevent: {msg['event']}\ndata: {payload}\n\n"
 
         resp = Response(event_stream(), mimetype="text/event-stream")
         resp.headers["Cache-Control"] = "no-cache"
         resp.headers["X-Accel-Buffering"] = "no"
+        resp.headers["X-Run-Id"] = run_id
         return resp
 
     return app
