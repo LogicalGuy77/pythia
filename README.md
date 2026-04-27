@@ -28,13 +28,13 @@ See [SPEC.md](SPEC.md) for the full architecture document.
 
 ## Prerequisites
 
-| Dependency | Version | Notes |
-|---|---|---|
-| Go | 1.21+ | Required to build AXL |
-| Python | 3.10+ | Application layer |
-| Docker | 24+ | Required by REE (≥8 GB memory recommended) |
-| OpenSSL | any | Key generation |
-| Node.js | 18+ | delphi_bridge (Phase 2 only) |
+| Dependency     | Version         | Notes                                            |
+| -------------- | --------------- | ------------------------------------------------ |
+| Go             | 1.21+           | Required to build AXL                            |
+| Python         | 3.10+           | Application layer                                |
+| Docker         | 24+             | Required by REE (≥8 GB memory recommended)       |
+| OpenSSL        | any             | Key generation                                   |
+| Node.js        | 18+             | delphi_bridge (Phase 2 only)                     |
 | NVIDIA drivers | 570.00+ (Linux) | GPU inference (optional; CPU fallback available) |
 
 ---
@@ -87,6 +87,7 @@ This starts the AXL bootstrap node (listens on `:9001`) and optionally starts
 the delphi_bridge if `delphi_bridge/.env` exists.
 
 Note the bootstrap address printed:
+
 ```
 Bootstrap address: tls://127.0.0.1:9001
 ```
@@ -113,6 +114,7 @@ python coordinator.py --prompt "Will ETH be above \$3000 at end of 2025?"
 ```
 
 Expected output:
+
 ```
 Prompt: 'Will ETH be above $3000 at end of 2025?'
 Sending to 2 peer(s)...
@@ -132,6 +134,16 @@ Verification: 2/2 peers verified
 Done.
 ```
 
+#### Node:
+
+prompt -> REE inference -> output + receipt
+
+#### Coordinator:
+
+receipt -> validate hashes
+receipt -> rerun inference via REE verify
+rerun output == receipt output -> VERIFIED
+
 ---
 
 ## One-command Demo
@@ -144,6 +156,7 @@ cd pythia
 Spins up coordinator + 2 nodes, waits for them to connect, runs the query, then cleans up.
 
 With Delphi trading:
+
 ```bash
 ./demo.sh "Will ETH be above \$3000 at end of 2025?" <market_id>
 ```
@@ -170,6 +183,7 @@ python verify.py --receipt example_receipt.json
 ```
 
 Port layout for node N:
+
 - AXL API: `9002 + N×10` → 9032
 - AXL router: `9003 + N×10` → 9033
 - Flask inference: `5001 + N×10` → 5031
@@ -182,7 +196,7 @@ The coordinator's `/topology` automatically picks up the new peer. Re-run coordi
 
 ### Setup
 
-1. Create a YES/NO market at https://app.delphi.fyi/ (agents cannot create markets)
+1. Create a YES/NO market at [https://app.delphi.fyi/](https://app.delphi.fyi/) (agents cannot create markets)
 2. Note the market ID from the URL
 3. Configure `delphi_bridge/.env`:
 
@@ -194,7 +208,7 @@ cp delphi_bridge/.env.example delphi_bridge/.env
 #   DELPHI_NETWORK=testnet
 ```
 
-4. Fund your wallet with testnet tokens
+1. Fund your wallet with testnet tokens
 
 ### Run
 
@@ -203,6 +217,7 @@ cp delphi_bridge/.env.example delphi_bridge/.env
 ```
 
 The coordinator will:
+
 1. Collect verified inference from all peers
 2. Extract probability estimates from their outputs
 3. Compute consensus probability
@@ -244,20 +259,25 @@ pythia/
 ## Troubleshooting
 
 **"No peers found in topology"**
+
 - Inference nodes haven't connected yet — wait 10–15s after starting them
 - Check the bootstrap IP in `start_node.sh` matches the coordinator machine's IP
 
 **REE times out (exit code 137)**
+
 - Docker is out of memory — increase Docker memory: Settings → Resources → Advanced → Memory → 8 GB+
 
 **"REE script not found"**
+
 - Run: `git clone https://github.com/gensyn-ai/ree ree`
 - Confirm `ree/ree.sh` exists and is executable: `chmod +x ree/ree.sh`
 
 **MCP router returns 404 on /register**
+
 - AXL router (port 9013/9023) may not be running
 - Check that AXL config has `router_addr` and `router_port` set
 
 **delphi_bridge returns 422 "Insufficient verified peers"**
+
 - The coordinator did not pass enough REE-verified receipts
 - Ensure at least 2 inference nodes are running and fully verified
