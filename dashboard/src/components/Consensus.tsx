@@ -42,10 +42,10 @@ export function Consensus({ consensus }: Props) {
           <svg viewBox="0 0 200 110">
             <defs>
               <linearGradient id="gaugeG" x1="0" y1="0" x2="200" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="40%" stopColor="#f59e0b" />
-                <stop offset="75%" stopColor="#fcd34d" />
-                <stop offset="100%" stopColor="#4ade80" />
+                <stop offset="0%"   stopColor="#fda4af" />
+                <stop offset="35%"  stopColor="#f43f5e" />
+                <stop offset="65%"  stopColor="#e11d48" />
+                <stop offset="100%" stopColor="#9f1239" />
               </linearGradient>
               <filter id="gaugeGlow">
                 <feGaussianBlur stdDeviation="3" result="blur" />
@@ -56,7 +56,7 @@ export function Consensus({ consensus }: Props) {
             <path
               d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
-              stroke="rgba(245,158,11,0.1)"
+              stroke="rgba(225,29,72,0.12)"
               strokeWidth="12"
               strokeLinecap="round"
             />

@@ -32,9 +32,9 @@ export function Topbar({ health, network }: Props) {
           <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
             <defs>
               <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#fcd34d" />
-                <stop offset="45%" stopColor="#f97316" />
-                <stop offset="100%" stopColor="#ef4444" />
+                <stop offset="0%"   stopColor="#fda4af" />
+                <stop offset="45%"  stopColor="#e11d48" />
+                <stop offset="100%" stopColor="#9f1239" />
               </linearGradient>
               <filter id="logoGlow">
                 <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -47,7 +47,7 @@ export function Topbar({ health, network }: Props) {
               stroke="url(#logoGrad)"
               strokeWidth="1.5"
               strokeLinejoin="round"
-              fill="rgba(245,158,11,0.06)"
+              fill="rgba(225,29,72,0.08)"
             />
             {/* Inner triangle oracle symbol */}
             <path
@@ -55,7 +55,7 @@ export function Topbar({ health, network }: Props) {
               stroke="url(#logoGrad)"
               strokeWidth="1.2"
               strokeLinejoin="round"
-              fill="rgba(245,158,11,0.1)"
+              fill="rgba(225,29,72,0.14)"
             />
             <circle cx="16" cy="16" r="2.5" fill="url(#logoGrad)" filter="url(#logoGlow)" />
           </svg>

@@ -14,10 +14,15 @@ import { Trade } from './components/Trade'
 import { PastRuns } from './components/PastRuns'
 import { ResearchContext } from './components/ResearchContext'
 
+import { animate, createScope, stagger } from 'animejs'
+
 const DEFAULT_PROMPT =
   'Will ETH be above $3000 at the end of 2025? Give a numeric probability percentage.'
 
 function App() {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const animeScopeRef = useRef<ReturnType<typeof createScope> | null>(null)
+
   // ── Server state polled on mount and periodically ──────────────────────
   const [health, setHealth] = useState<Health | null>(null)
   const [topology, setTopology] = useState<Topology | null>(null)
@@ -40,6 +45,32 @@ function App() {
   const [verify, setVerify] = useState(true)
   const [runState, dispatch] = useReducer(runReducer, initialRunState)
   const abortRef = useRef<AbortController | null>(null)
+
+  // ── Entrance animation (scoped) ─────────────────────────────────────────
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const scope = createScope({ root: rootRef }).add(() => {
+      animate('.topbar', {
+        opacity: [0, 1],
+        translateY: [-10, 0],
+        duration: 900,
+        ease: 'outExpo',
+      })
+
+      animate('.reveal', {
+        opacity: [0, 1],
+        translateY: [18, 0],
+        duration: 900,
+        delay: stagger(70, { start: 120 }),
+        ease: 'outExpo',
+      })
+    })
+
+    animeScopeRef.current = scope
+    return () => scope.revert()
+  }, [])
 
   // ── Initial fetch + 8s polling for live status panels ──────────────────
   useEffect(() => {
@@ -211,12 +242,41 @@ function App() {
     [runState.peerOrder, runState.peers],
   )
 
+  // Animate newly added peer cards without re-animating existing ones.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const nodes = Array.from(
+      root.querySelectorAll<HTMLElement>('.peer-card:not([data-animated="1"])'),
+    )
+    if (nodes.length === 0) return
+
+    for (const n of nodes) n.dataset.animated = '1'
+
+    animate(nodes, {
+      opacity: [0, 1],
+      translateY: [14, 0],
+      scale: [0.985, 1],
+      duration: 650,
+      delay: stagger(55),
+      ease: 'outExpo',
+    })
+  }, [orderedPeers.length])
+
   return (
-    <div className="app">
+    <div ref={rootRef} className="app scene">
+      <div className="scene-bg" aria-hidden="true">
+        <div className="scene-aurora" />
+        <div className="scene-grid" />
+        <div className="scene-noise" />
+      </div>
+
       <Topbar health={health} network={wallet?.network} />
 
       <main className="main">
-        <Sidebar
+        <div className="reveal">
+          <Sidebar
           wallet={wallet}
           walletError={walletError}
           topology={topology}
@@ -227,43 +287,115 @@ function App() {
           selectedMarketId={selectedMarket?.id ?? null}
           onSelectMarket={setSelectedMarket}
           onRefreshMarkets={refreshMarkets}
-        />
+          />
+        </div>
 
         <div className="workspace">
-          <PastRuns
-            runs={pastRuns}
-            loading={pastRunsLoading}
-            error={pastRunsError}
-            selectedRunId={selectedRunId}
-            onRefresh={refreshRuns}
-            onOpen={onOpenRun}
-            onDelete={onDeleteRun}
-          />
+          <section className="hero reveal">
+            <div className="hero-eyebrow">
+              <div className="hero-badge-row">
+                <span className="badge badge--brand">oracle studio</span>
+                {runState.running && (
+                  <span className="badge badge--brand">
+                    <span className="dot dot--brand" /> live
+                  </span>
+                )}
+              </div>
+              <div className="hero-stat-row">
+                <div className="hero-stat-chip">
+                  <span className="hero-stat-num">{topology?.peerCount ?? '—'}</span>
+                  <span className="hero-stat-label">peers</span>
+                </div>
+                <div className="hero-stat-div" />
+                <div className="hero-stat-chip">
+                  <span className="hero-stat-num">{pastRuns.length}</span>
+                  <span className="hero-stat-label">runs</span>
+                </div>
+                <div className="hero-stat-div" />
+                <div className="hero-stat-chip">
+                  <span className="hero-stat-num hero-stat-num--sm">
+                    {wallet ? wallet.network : '—'}
+                  </span>
+                  <span className="hero-stat-label">network</span>
+                </div>
+                <div className="hero-stat-div" />
+                <div className="hero-stat-chip">
+                  <span className="hero-stat-num hero-stat-num--sm">
+                    {wallet ? `${parseFloat(String(wallet.token.formatted ?? 0)).toFixed(0)} USDC` : '—'}
+                  </span>
+                  <span className="hero-stat-label">balance</span>
+                </div>
+              </div>
+            </div>
+            <h1 className="hero-title">
+              Turn a prompt into a<br />
+              <span className="hero-title-grad">provable market move.</span>
+            </h1>
+            <p className="hero-sub">
+              Peer-sourced inference, verifiable receipts, on-chain settlement—
+              <br />all in one live view.
+            </p>
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="btn btn--primary btn--lg"
+                onClick={onRun}
+                disabled={runState.running || !prompt.trim()}
+              >
+                <svg width="11" height="11" viewBox="0 0 10 10" fill="currentColor"><polygon points="2,1 9,5 2,9"/></svg>
+                Run inference
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={refreshMarkets}
+                disabled={marketsLoading}
+              >
+                Refresh markets
+              </button>
+            </div>
+          </section>
 
-          <RunPanel
-            selectedMarket={selectedMarket}
-            onClearMarket={() => setSelectedMarket(null)}
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            amount={amount}
-            onAmountChange={setAmount}
-            minVerified={minVerified}
-            onMinVerifiedChange={setMinVerified}
-            verify={verify}
-            onVerifyChange={setVerify}
-            running={runState.running}
-            onRun={onRun}
-            onCancel={onCancel}
-            timeline={runState.timeline}
-            fatalError={runState.fatalError}
-          />
+          <div className="reveal">
+            <PastRuns
+              runs={pastRuns}
+              loading={pastRunsLoading}
+              error={pastRunsError}
+              selectedRunId={selectedRunId}
+              onRefresh={refreshRuns}
+              onOpen={onOpenRun}
+              onDelete={onDeleteRun}
+            />
+          </div>
+
+          <div className="reveal">
+            <RunPanel
+              selectedMarket={selectedMarket}
+              onClearMarket={() => setSelectedMarket(null)}
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              amount={amount}
+              onAmountChange={setAmount}
+              minVerified={minVerified}
+              onMinVerifiedChange={setMinVerified}
+              verify={verify}
+              onVerifyChange={setVerify}
+              running={runState.running}
+              onRun={onRun}
+              onCancel={onCancel}
+              timeline={runState.timeline}
+              fatalError={runState.fatalError}
+            />
+          </div>
 
           {runState.research && (
-            <ResearchContext research={runState.research} />
+            <div className="reveal">
+              <ResearchContext research={runState.research} />
+            </div>
           )}
 
           {orderedPeers.length > 0 && (
-            <section>
+            <section className="reveal">
               <div className="section-heading">
                 <span className="section-label">Peer Receipts</span>
                 <span className="mono-soft">
@@ -280,15 +412,19 @@ function App() {
           )}
 
           {runState.consensus && (
-            <Consensus consensus={runState.consensus} />
+            <div className="reveal">
+              <Consensus consensus={runState.consensus} />
+            </div>
           )}
 
           {runState.tradeDecision && (
-            <Trade
-              decision={runState.tradeDecision}
-              result={runState.tradeResult}
-              network={wallet?.network}
-            />
+            <div className="reveal">
+              <Trade
+                decision={runState.tradeDecision}
+                result={runState.tradeResult}
+                network={wallet?.network}
+              />
+            </div>
           )}
         </div>
       </main>
