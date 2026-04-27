@@ -100,12 +100,33 @@ def route_request():
     logger.info(f"[/route] forwarding to {endpoint}: {str(rpc_request)[:200]}")
 
     try:
-        resp = requests.post(endpoint, json=rpc_request, timeout=360)
-        resp.raise_for_status()
-        return resp.json(), resp.status_code
+        resp = requests.post(endpoint, json=rpc_request, timeout=2100)
+        data = resp.json()
+        # AXL has a response size limit — serialize receipt as a JSON string
+        # so the entire response stays within AXL's parser limits.
+        if "result" in data and isinstance(data.get("result"), dict):
+            result = data["result"]
+            if "receipt" in result and isinstance(result["receipt"], dict):
+                result["receipt"] = json.dumps(result["receipt"])
+
+        # AXL expects an MCPResponse envelope: {service, response, error?}
+        # where response is the raw JSON-RPC response and error is a string.
+        envelope = {
+            "service": service,
+            "response": data,
+        }
+        if "error" in data:
+            err = data["error"]
+            if isinstance(err, dict):
+                envelope["error"] = f"{err.get('code', '')}: {err.get('message', str(err))}"
+            else:
+                envelope["error"] = str(err)
+
+        logger.info(f"[/route] returning envelope: {str(envelope)[:300]}")
+        return jsonify(envelope), 200
     except requests.RequestException as e:
         logger.error(f"Failed to route to {endpoint}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"service": service, "response": {}, "error": str(e)}), 200
 
 
 def main():

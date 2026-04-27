@@ -91,7 +91,7 @@ def call_peer_infer(api_port: int, peer_id: str, prompt: str) -> dict:
     logging.info("Calling peer %s...%s", peer_id[:8], peer_id[-8:])
 
     try:
-        resp = requests.post(url, json=payload, timeout=360)  # 6 min; REE can be slow
+        resp = requests.post(url, json=payload, timeout=2100)  # 35 min; first run downloads Docker image
         resp.raise_for_status()
     except requests.Timeout:
         raise RuntimeError(f"Peer {peer_id[:16]}... timed out after 360s")
@@ -126,9 +126,9 @@ def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
         tmp_path = f.name
 
     try:
-        # Step 1: structural validation (fast, no Docker)
+        # Step 1: structural validation via the same Dockerized REE wrapper.
         validate = subprocess.run(
-            ["gensyn-sdk", "validate", "--receipt-path", tmp_path],
+            [ree_path, "validate", "--receipt-path", tmp_path],
             capture_output=True, text=True, timeout=30,
         )
         if validate.returncode != 0:
@@ -267,10 +267,17 @@ def main():
 
         content = result.get("content", [])
         text_output = content[0].get("text", "") if content else ""
-        receipt     = result.get("receipt", {})
+        receipt = result.get("receipt", {})
+        # Router may serialize receipt as a JSON string to stay within AXL limits
+        if isinstance(receipt, str):
+            try:
+                receipt = json.loads(receipt)
+            except json.JSONDecodeError:
+                receipt = {}
 
         print(f"  Output:       {text_output[:300]!r}")
-        print(f"  receipt_hash: {receipt.get('receipt_hash', 'N/A')}")
+        receipt_hash = receipt.get("receipt_hash") or receipt.get("hashes", {}).get("receipt_hash")
+        print(f"  receipt_hash: {receipt_hash or 'N/A'}")
 
         # ── Phase 3: Receipt Verification ────────────────────────────────────
         print("  Verifying...", end=" ", flush=True)
