@@ -53,6 +53,8 @@ Express server on `localhost:3001` bridging Python ↔ Delphi SDK (TypeScript-on
 
 - `GET /markets` → list open markets
 - `GET /markets/:id` → single market details
+- `GET /wallet` → read configured wallet address, ETH/token balances, position count
+- `POST /quote` → read-only buy quote for `{market_id, outcome_index, amount_usdc}`
 - `POST /trade` → `{market_id, outcome_index, amount_usdc, verified_receipts[]}` → on-chain buy
 
 **Safety constraint**: refuses trade if `verified_receipts.length < MIN_VERIFIED_PEERS`.
@@ -149,9 +151,13 @@ TypeScript SDK: `@gensyn-ai/gensyn-delphi-sdk`
 ```typescript
 const client = new DelphiClient();                            // reads env vars
 const { markets } = await client.listMarkets({ status: "open" });
-await client.approveToken({ marketAddress: market.implementation });
+await client.ensureTokenApproval({
+  marketAddress: market.id,
+  minimumAmount: maxTokensIn,
+  approveAmount: maxTokensIn,
+});
 const { transactionHash } = await client.buyShares({
-  marketAddress: market.implementation,
+  marketAddress: market.id,
   outcomeIdx: 0,                                              // 0=YES, 1=NO
   sharesOut:    BigInt(Math.round(amount * 1e18)),
   maxTokensIn:  BigInt(Math.round(amount * 1.2 * 1e6)),       // 20% slippage buffer
@@ -159,6 +165,9 @@ const { transactionHash } = await client.buyShares({
 ```
 
 Required env vars: `DELPHI_API_ACCESS_KEY`, `DELPHI_SIGNER_TYPE=private_key`, `WALLET_PRIVATE_KEY=0x...`, `DELPHI_NETWORK=testnet`
+
+On testnet, the wallet needs native ETH for gas and mock USDC from the Delphi
+testnet faucet before trades can settle.
 
 ---
 

@@ -72,6 +72,13 @@ cp .env.example .env
 # Edit .env — fill in DELPHI_API_ACCESS_KEY, WALLET_PRIVATE_KEY
 ```
 
+### 5. (Optional) Install dashboard deps
+
+```bash
+cd dashboard
+npm install
+```
+
 ---
 
 ## Running Locally (1 coordinator + 2 inference nodes)
@@ -208,12 +215,28 @@ cp delphi_bridge/.env.example delphi_bridge/.env
 #   DELPHI_NETWORK=testnet
 ```
 
-1. Fund your wallet with testnet tokens
+4. Fund your wallet on Gensyn testnet:
+   - ETH is used for gas.
+   - Mock USDC is the Delphi collateral token.
+   - The testnet USDC faucet contract is `0xB5876320DdA1AEE3eFC03aD02dC2e2CB4b61B7D9`.
+
+Check bridge health, wallet balances, and a read-only quote:
+
+```bash
+curl http://127.0.0.1:3001/health
+curl http://127.0.0.1:3001/wallet
+curl -X POST http://127.0.0.1:3001/quote \
+  -H 'Content-Type: application/json' \
+  -d '{"market_id":"<market_id>","outcome_index":0,"amount_usdc":0.05}'
+```
 
 ### Run
 
 ```bash
-./demo.sh "Will ETH be above \$3000 at end of 2025?" <market_id>
+python coordinator.py \
+  --prompt "Will ETH be above \$3000 at end of 2025? Give a numeric probability percentage." \
+  --market-id <market_id> \
+  --trade-amount-usdc 0.05
 ```
 
 The coordinator will:
@@ -225,6 +248,96 @@ The coordinator will:
 5. Print the transaction hash
 
 **Safety guarantee**: the bridge refuses to trade if fewer than 2 peers have REE-verified receipts.
+
+---
+
+## Dashboard (Web UI)
+
+A React + Vite dashboard under `dashboard/` exposes every backend feature
+visually: live wallet + peer status, an open-markets browser, a prompt runner
+with a Server-Sent Events timeline, per-peer REE receipts, the consensus
+probability gauge, and the on-chain trade outcome with explorer link.
+
+It talks to a small Flask control plane (`api_server.py`) that wraps the
+coordinator's primitives behind HTTP + SSE.
+
+### Run
+
+Keep the coordinator + nodes + delphi_bridge running as usual, then in two more
+terminals:
+
+```bash
+# Terminal A — dashboard control plane (HTTP + SSE on :5050)
+cd pythia
+python api_server.py
+```
+
+```bash
+# Terminal B — Vite dev server (proxies /api -> :5050)
+cd pythia/dashboard
+npm run dev
+```
+
+Open <http://localhost:5173>.
+
+### What you'll see
+
+- **Top bar** — live AXL / REE / Delphi service health pills + active network.
+- **Sidebar** — wallet (address, ETH, USDC, open positions), connected peers
+  with pulsing live dots, and an open-markets list (click to select).
+- **Run panel** — prompt textarea, trade amount, min-verified-peers, and a
+  toggle for full REE re-run verification. While a run is in progress, a live
+  timeline streams every phase (`discover` → `inference` → `verify` →
+  `aggregate` → `trade`).
+- **Peer cards** — one per peer, showing the model output, the receipt hash,
+  the verification result, and an expandable view of the full REE receipt JSON.
+- **Consensus gauge** — half-circle gauge with the aggregated probability and
+  per-peer estimates.
+- **On-chain Trade card** — decision (YES / NO / ABSTAIN), amount, verified
+  peer count, transaction hash with a direct block-explorer link.
+
+### Endpoints (`api_server.py`)
+
+| Endpoint                | Purpose                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `GET  /api/health`      | Aggregated AXL / REE / delphi_bridge status          |
+| `GET  /api/topology`    | AXL topology and peer list                           |
+| `GET  /api/markets`     | Proxy to delphi_bridge `GET /markets`                |
+| `GET  /api/wallet`      | Proxy to delphi_bridge `GET /wallet`                 |
+| `POST /api/quote`       | Proxy to delphi_bridge `POST /quote`                 |
+| `POST /api/run`         | SSE stream that orchestrates the full pipeline       |
+
+The `/api/run` SSE stream emits `status`, `topology`, `peer_started`,
+`peer_output`, `peer_verified`, `consensus`, `trade_decision`, `trade_result`,
+`done`, and `error` events.
+
+---
+
+## System Prompt
+
+The base Qwen model often refuses to produce numeric probabilities for future
+events ("I cannot predict the future…"). The inference node now prefixes every
+user prompt with a Pythia steering prompt that forces a calibrated estimate in a
+parseable shape. REE applies Qwen's chat template internally, so the steering
+prompt is passed as plain prompt text rather than raw ChatML tokens:
+
+```
+Probability: NN%
+Reasoning: <one or two sentences>
+```
+
+This is on by default. To disable or override:
+
+```bash
+# Disable wrapper, pass raw user prompts to REE
+python inference_node.py --no-system-prompt ...
+
+# Override with a custom system prompt
+python inference_node.py --system-prompt "You are an economic forecaster…" ...
+```
+
+`coordinator.py`'s `extract_probability()` understands the `NN%`, `probability:
+0.NN`, and `chance: NN` patterns the system prompt instructs the model to emit.
 
 ---
 
@@ -240,6 +353,7 @@ pythia/
 │   └── ree.sh
 ├── inference_node.py             ← inference peer: MCP server + REE wrapper
 ├── coordinator.py                ← coordinator: topology discovery + routing
+├── api_server.py                 ← dashboard control plane (HTTP + SSE)
 ├── verify.py                     ← standalone receipt verifier
 ├── start_node.sh                 ← start AXL + inference_node.py
 ├── start_coordinator.sh          ← start AXL bootstrap + optional delphi_bridge
@@ -247,11 +361,22 @@ pythia/
 ├── node-config.template.json     ← AXL config template
 ├── requirements.txt
 ├── example_receipt.json          ← example REE receipt
-└── delphi_bridge/
-    ├── index.ts                  ← Express sidecar bridging Python → Delphi SDK
+├── delphi_bridge/
+│   ├── index.ts                  ← Express sidecar bridging Python → Delphi SDK
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env.example
+└── dashboard/                    ← Vite + React + TS dashboard UI
+    ├── index.html
     ├── package.json
-    ├── tsconfig.json
-    └── .env.example
+    ├── vite.config.ts            ← proxies /api -> http://127.0.0.1:5050
+    └── src/
+        ├── App.tsx
+        ├── api.ts                ← REST + SSE client
+        ├── runState.ts           ← reducer for live run events
+        ├── types.ts              ← shared types with api_server.py
+        └── components/           ← Topbar, Sidebar, RunPanel, PeerCard,
+                                      Consensus, Trade
 ```
 
 ---

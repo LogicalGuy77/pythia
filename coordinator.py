@@ -40,8 +40,8 @@ def parse_args():
                    help="URL of the delphi_bridge Express server")
     p.add_argument("--min-verified-peers", type=int, default=2,
                    help="Minimum verified receipts required before trading (default: 2)")
-    p.add_argument("--trade-amount-usdc",  type=float, default=10.0,
-                   help="USDC amount to trade on each Delphi position (default: 10.0)")
+    p.add_argument("--trade-amount-usdc",  type=float, default=0.05,
+                   help="USDC amount to trade on each Delphi position (default: 0.05)")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
@@ -114,15 +114,15 @@ def call_peer_infer(api_port: int, peer_id: str, prompt: str) -> dict:
 
 def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
     """
-    Write receipt to a temp file, run structural validate then full verify.
+    Write receipt to a temp file, run full cryptographic verify via ree.sh.
 
     Returns (success, detail_message).
+    Full verify re-runs Docker inference — can take several minutes.
 
-    Step 1 (validate): calls Docker directly to avoid ree.sh overhead
-    (docker pull, setfacl) since the 'ree' image is already tagged locally.
-    All SDK output goes to stdout; stderr only has the ACL warning noise.
-
-    Step 2 (verify): calls ree.sh for the full cryptographic re-run.
+    The structural 'validate' step is skipped: it requires the receipt's
+    embedded file paths to resolve inside the container, which is fragile
+    when the receipt is re-serialised as a temp file.  The 'verify' step
+    performs a full cryptographic re-run which is the meaningful check.
     """
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", delete=False, prefix="pythia_receipt_"
@@ -130,37 +130,12 @@ def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
         json.dump(receipt_dict, f)
         tmp_path = f.name
 
-    # The receipt is bind-mounted into Docker and read by the non-root `gensyn`
-    # user. NamedTemporaryFile creates 0600 files, which the container cannot
-    # read even when the parent directory is mounted.
+    # Docker container user (uid 1001) needs read access to the temp file.
     os.chmod(tmp_path, 0o644)
 
-    tmp_dir  = os.path.dirname(tmp_path)
-    tmp_base = os.path.basename(tmp_path)
-    home     = os.path.expanduser("~")
-
     try:
-        # Step 1: structural validation via direct Docker (no ree.sh wrapper).
-        # ree.sh pipes all SDK output to stdout via sed; we capture stdout here.
-        validate = subprocess.run(
-            [
-                "docker", "run", "--rm",
-                "-e", "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True",
-                "-v", f"{tmp_dir}:/mnt/receipt-path:ro",
-                "-v", f"{home}/.cache:/home/gensyn/.cache",
-                "ree",
-                "validate",
-                "--receipt-path", f"/mnt/receipt-path/{tmp_base}",
-            ],
-            capture_output=True, text=True, timeout=60,
-        )
-        logging.debug("validate stdout: %s", validate.stdout[:500])
-        logging.debug("validate stderr: %s", validate.stderr[:200])
-        if validate.returncode != 0:
-            combined = (validate.stdout + "\n" + validate.stderr).strip()
-            return False, f"validate failed: {combined[:400]}"
-
-        # Step 2: full cryptographic verify (re-runs Docker inference via ree.sh).
+        # Full cryptographic verify — re-runs Docker inference via ree.sh.
+        # ree.sh pipes all SDK output to stdout via sed; check combined output.
         verify = subprocess.run(
             [ree_path, "verify", "--receipt-path", tmp_path],
             capture_output=True, text=True, timeout=600,
@@ -169,7 +144,7 @@ def verify_receipt(ree_path: str, receipt_dict: dict) -> tuple[bool, str]:
         logging.debug("verify stderr: %s", verify.stderr[:200])
         if verify.returncode != 0:
             combined = (verify.stdout + "\n" + verify.stderr).strip()
-            return False, f"verify failed: {combined[:400]}"
+            return False, f"verify failed: {combined[:1000]}"
 
         return True, "OK"
 

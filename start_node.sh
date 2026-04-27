@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_PORT=$((9002 + NODE_NUM * 10))
 ROUTER_PORT=$((9003 + NODE_NUM * 10))
 INFERENCE_PORT=$((5001 + NODE_NUM * 10))
-MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-20}"
+MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-2000}"
 
 CONFIG_FILE="${SCRIPT_DIR}/axl/node${NODE_NUM}-config.json"
 PEM_FILE="${SCRIPT_DIR}/axl/node${NODE_NUM}-private.pem"

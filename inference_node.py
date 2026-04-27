@@ -14,7 +14,9 @@ import glob
 import json
 import logging
 import os
+import re
 import signal
+import shutil
 import socket
 import subprocess
 import sys
@@ -30,6 +32,47 @@ from flask import Flask, request, jsonify
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# System prompt
+# ---------------------------------------------------------------------------
+#
+# The base Qwen model often refuses to answer probability questions ("I cannot
+# predict the future..."). REE already applies the model's chat template for
+# Qwen, so we pass the steering instruction as normal prompt text instead of
+# raw ChatML tokens. This keeps REE's own tokenizer/template path in charge.
+# coordinator.extract_probability() looks for "Probability: NN%" / "NN%" /
+# "probability: 0.NN", so we ask the model to emit one of those.
+
+DEFAULT_SYSTEM_PROMPT = (
+    "You are Pythia, a calibrated probability estimator for prediction markets. "
+    "For every question you receive, you MUST produce a numeric probability "
+    "estimate. Never refuse, never say you cannot predict, never hedge with "
+    "'it depends'. Always commit to your best estimate based on common sense "
+    "and any context provided.\n\n"
+    "Output format (strict):\n"
+    "Probability: NN%\n"
+    "Reasoning: <one or two short sentences>\n\n"
+    "Where NN is an integer between 0 and 100. Higher means the event is more "
+    "likely to happen. Use 50% only when you are genuinely uncertain."
+)
+
+
+def build_steered_prompt(system_prompt: str, user_prompt: str) -> str:
+    """
+    Prefix the user prompt with the Pythia instruction in plain text.
+
+    REE's Qwen path logs "applying chat template"; if we pass raw ChatML here,
+    those tokens become user-content inside another template. Plain text is the
+    safer contract for REE's --prompt-text input.
+    """
+    return (
+        f"{system_prompt}\n\n"
+        "Question:\n"
+        f"{user_prompt}\n\n"
+        "Answer now using exactly the required format."
+    )
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Pythia inference node")
@@ -47,6 +90,16 @@ def parse_args():
                    help="HuggingFace model name to run in REE")
     p.add_argument("--max-new-tokens", type=int, default=200,
                    help="Max tokens for REE inference (default: 200)")
+    p.add_argument(
+        "--system-prompt",
+        default=DEFAULT_SYSTEM_PROMPT,
+        help="Steering instruction prepended to every user prompt",
+    )
+    p.add_argument(
+        "--no-system-prompt",
+        action="store_true",
+        help="Disable the system prompt wrapper and pass user prompts raw",
+    )
     p.add_argument("--log-level",      default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
@@ -81,17 +134,7 @@ def run_ree_inference(
     ]
     logging.info("Running REE: %s", " ".join(cmd))
 
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=1800,  # 30-min timeout; first run downloads Docker image + model
-        )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("REE inference timed out after 300s")
-    except FileNotFoundError:
-        raise RuntimeError(f"REE script not found at: {ree_path}")
+    result = _run_ree_command(cmd)
 
     if result.returncode != 0:
         # Surface both streams because shell wrappers and Docker may split
@@ -99,6 +142,52 @@ def run_ree_inference(
         logging.error("REE stdout: %s", result.stdout)
         logging.error("REE stderr: %s", result.stderr)
         combined = (result.stderr or "") + (result.stdout or "")
+
+        # The REE on-disk cache can land in two distinct broken states:
+        #
+        # 1. Stale compiled artifacts:
+        #      compiled-artifacts-reproducible/gensyn_module.py
+        #      ValueError: offset (...) must be ... no greater than buffer length
+        #    Fix: delete `compiled-artifacts-reproducible/` and retry.
+        #
+        # 2. Corrupt model export (typically caused by two REE processes
+        #    racing on prepare_task before we serialized them with a flock):
+        #      InvalidModel: Tensor offset overflows tensor file tensors.binary
+        #      ValueError: offset ... no greater than buffer length
+        #      ...inside conversion/modules.py during torch.frombuffer
+        #    Fix: delete the entire `model/` dir for that task hash so REE
+        #    re-runs the export from a clean slate.
+        #
+        # Both are recoverable without operator intervention; we attempt one
+        # auto-repair and retry once.
+        kind = _classify_cache_corruption(combined)
+        if kind is not None:
+            repaired = _repair_ree_cache(model_name, combined, kind=kind)
+            if repaired:
+                logging.warning(
+                    "REE cache looked corrupt (kind=%s); cleaned and retrying once.",
+                    kind,
+                )
+                result = _run_ree_command(cmd)
+                if result.returncode == 0:
+                    logging.info("REE retry succeeded after cache repair")
+                else:
+                    logging.error("REE retry stdout: %s", result.stdout)
+                    logging.error("REE retry stderr: %s", result.stderr)
+                    combined = (result.stderr or "") + (result.stdout or "")
+
+        if result.returncode == 0:
+            logging.debug("REE stdout: %s", result.stdout[:1000])
+            receipt = _find_latest_receipt(model_name, run_start_time)
+            if receipt is None:
+                raise RuntimeError(
+                    "REE ran successfully but no receipt file found under "
+                    f"~/.cache/gensyn/ for model '{model_name}'"
+                )
+            output = receipt.get("output", {})
+            text_output = receipt.get("text_output") or output.get("text_output", "")
+            return text_output, receipt
+
         raise RuntimeError(
             f"REE exited with code {result.returncode}: {combined[-500:].strip()}"
         )
@@ -115,6 +204,101 @@ def run_ree_inference(
     output = receipt.get("output", {})
     text_output = receipt.get("text_output") or output.get("text_output", "")
     return text_output, receipt
+
+
+def _run_ree_command(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run REE and normalize common process-level failures."""
+    try:
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=1800,  # 30-min timeout; first run downloads Docker image + model
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("REE inference timed out after 1800s")
+    except FileNotFoundError:
+        raise RuntimeError(f"REE script not found at: {cmd[0]}")
+
+
+def _classify_cache_corruption(output: str) -> Optional[str]:
+    """
+    Identify which kind of REE cache corruption (if any) caused this failure.
+
+    Returns:
+      - "compiled-artifacts": stale compiled artifacts; recoverable by
+        deleting just `compiled-artifacts-reproducible/`.
+      - "model-export": corrupt ONNX export (typically `tensors.binary`);
+        recoverable by deleting the full `model/` directory so REE re-runs
+        `prepare_task` from scratch.
+      - None: not a cache-corruption failure we can safely auto-repair.
+    """
+    if "Tensor offset overflows tensor file tensors.binary" in output:
+        return "model-export"
+
+    if "tensors.binary" in output and "buffer length" in output and "offset" in output:
+        return "model-export"
+
+    if (
+        "compiled-artifacts-reproducible" in output
+        and "buffer length" in output
+        and "ValueError: offset" in output
+    ):
+        return "compiled-artifacts"
+
+    return None
+
+
+def _find_corrupt_task_dir(model_name: str, output: str) -> Optional[Path]:
+    """Best-effort extraction of the host-side task_dir from REE's traceback."""
+    model_dir = re.escape(model_name.replace("/", "--"))
+    patterns = [
+        rf"task_dir=([^\s,]+/{model_dir}/[0-9a-f]+)",
+        rf"([^\s'\"]+/{model_dir}/[0-9a-f]+)/model[/'\"]",
+        rf"([^\s'\"]+/{model_dir}/[0-9a-f]+)",
+    ]
+    for pat in patterns:
+        match = re.search(pat, output)
+        if match:
+            return Path(match.group(1))
+    return None
+
+
+def _repair_ree_cache(model_name: str, output: str, *, kind: str) -> bool:
+    """
+    Delete the corrupt subtree of the REE cache so the next run rebuilds it.
+
+    For `compiled-artifacts` corruption we only nuke `compiled-artifacts-
+    reproducible/` — reusing `model.onnx` is much faster and the traceback
+    points specifically at compiled artifacts.
+
+    For `model-export` corruption (e.g. truncated `tensors.binary` from a
+    concurrent-export race) we have to nuke the entire `model/` directory:
+    the ONNX graph and tensor file are produced together and a partially
+    written tensor file can't be salvaged.
+    """
+    task_dir = _find_corrupt_task_dir(model_name, output)
+    if task_dir is None:
+        logging.warning("Could not locate corrupt REE task dir in error output")
+        return False
+
+    if kind == "compiled-artifacts":
+        target = task_dir / "model" / "compiled-artifacts-reproducible"
+    elif kind == "model-export":
+        target = task_dir / "model"
+    else:
+        return False
+
+    try:
+        if target.exists():
+            shutil.rmtree(target)
+            logging.warning("Deleted corrupt REE cache subtree: %s", target)
+            return True
+        logging.warning("REE cache subtree not found: %s", target)
+        return False
+    except OSError as e:
+        logging.warning("Failed to delete REE cache subtree %s: %s", target, e)
+        return False
 
 
 def _find_latest_receipt(model_name: str, after_timestamp: float) -> Optional[dict]:
@@ -164,7 +348,12 @@ def _find_latest_receipt(model_name: str, after_timestamp: float) -> Optional[di
 # Flask MCP server (JSON-RPC 2.0)
 # ---------------------------------------------------------------------------
 
-def create_flask_app(ree_path: str, model_name: str, max_new_tokens: int) -> Flask:
+def create_flask_app(
+    ree_path: str,
+    model_name: str,
+    max_new_tokens: int,
+    system_prompt: Optional[str] = None,
+) -> Flask:
     app = Flask(__name__)
 
     @app.route("/", methods=["POST"])
@@ -214,9 +403,19 @@ def create_flask_app(ree_path: str, model_name: str, max_new_tokens: int) -> Fla
                 return _rpc_error(req_id, -32602,
                                   "Missing or invalid 'prompt' in arguments")
 
+            # Prefix the user prompt with the Pythia instruction so the model
+            # produces a parseable probability estimate. The receipt records
+            # the exact steered prompt so verifiers can re-derive the same
+            # output deterministically.
+            wrapped = (
+                build_steered_prompt(system_prompt, prompt)
+                if system_prompt
+                else prompt
+            )
+
             try:
                 text_output, receipt = run_ree_inference(
-                    ree_path, model_name, prompt, max_new_tokens
+                    ree_path, model_name, wrapped, max_new_tokens
                 )
                 return jsonify({
                     "jsonrpc": "2.0",
@@ -409,7 +608,18 @@ def main():
     start_recv_poll_thread(args.api_port, stop_event)
 
     # Start Flask MCP server (blocking)
-    app = create_flask_app(ree_path, args.model_name, args.max_new_tokens)
+    system_prompt = None if args.no_system_prompt else args.system_prompt
+    if system_prompt:
+        logging.info("System prompt enabled (%d chars)", len(system_prompt))
+    else:
+        logging.info("System prompt disabled (raw user prompts)")
+
+    app = create_flask_app(
+        ree_path,
+        args.model_name,
+        args.max_new_tokens,
+        system_prompt=system_prompt,
+    )
     logging.info("MCP inference server listening on 127.0.0.1:%d", args.inference_port)
     app.run(host="127.0.0.1", port=args.inference_port, debug=False)
 
