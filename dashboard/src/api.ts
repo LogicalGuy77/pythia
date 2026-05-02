@@ -1,5 +1,5 @@
 // Lightweight client wrappers around the Pythia dashboard api_server.
-// All paths are relative; Vite proxies /api -> http://127.0.0.1:5050 in dev.
+// Past runs are loaded from static exports so the Vercel demo can be read-only.
 
 import type {
   Health,
@@ -20,22 +20,20 @@ async function jget<T>(path: string): Promise<T> {
   return (await res.json()) as T
 }
 
-async function jdelete(path: string): Promise<void> {
-  const res = await fetch(path, { method: 'DELETE' })
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`DELETE ${path} -> ${res.status}: ${txt.slice(0, 200)}`)
-  }
-}
-
 export const api = {
   health:    () => jget<Health>('/api/health'),
   topology:  () => jget<Topology>('/api/topology'),
   markets:   () => jget<MarketsResponse>('/api/markets'),
   wallet:    () => jget<Wallet>('/api/wallet'),
-  runs:      (limit = 25) => jget<RunsResponse>(`/api/runs?limit=${limit}`),
-  run:       (runId: string) => jget<PersistedRun>(`/api/runs/${runId}`),
-  deleteRun: (runId: string) => jdelete(`/api/runs/${runId}`),
+  runs:      (limit = 25) => {
+    void limit
+    return jget<RunsResponse>('/data/runs.json')
+  },
+  run:       (runId: string) => jget<PersistedRun>(`/data/runs/${runId}.json`),
+  deleteRun: async (runId: string) => {
+    void runId
+    throw new Error('Deleting runs is disabled in the read-only demo')
+  },
 }
 
 // ---------------------------------------------------------------------

@@ -1,0 +1,400 @@
+{
+  "id": "aaece5b7b64c42d49fbd5e55ecf4a2d2",
+  "createdAt": 1777661651.9851632,
+  "updatedAt": 1777661941.1529665,
+  "status": "completed",
+  "prompt": "Will The price of ETH in May go below 2500?",
+  "marketId": "0xabb1f54ab5caa61f331da729c411aab39e478754",
+  "amountUsdc": 0.05,
+  "minVerifiedPeers": 2,
+  "verify": true,
+  "summary": {
+    "research": {
+      "ok": true,
+      "query": "Will The price of ETH in May go below 2500?",
+      "generatedAt": "2026-05-01T18:54:12.014601+00:00",
+      "results": [
+        {
+          "title": "Ethereum Price Forecast: ETH Risks 20% Drop in May Due to These 5 Factors | FXEmpire",
+          "url": "https://www.fxempire.com/forecasts/article/ethereum-price-forecast-eth-risks-20-drop-in-may-due-to-these-5-factors-1595183",
+          "publishedDate": "2026-05-01T11:41:24.000Z",
+          "author": "Yashu Gola",
+          "summary": "ETH faces a May pullback risk toward $1,730\u2013$1,850 due to a strong weekly resistance cluster near $2,340, rising macro pressure from oil/Inflation, and weakening market demand signals."
+        },
+        {
+          "title": "Ethereum (ETH) Price: Technical Analysis Shows Support at $2,500 Level",
+          "url": "https://blockonomi.com/ethereum-eth-price-technical-analysis-shows-support-at-2500-level/",
+          "publishedDate": "2025-05-23T08:49:06.000Z",
+          "author": "Maisie Morrison",
+          "summary": "Ethereum (ETH) is finding support around the $2,500 level after a 60% May rally, with long-term holders selling and large-scale outflows from exchanges noted."
+        }
+      ]
+    },
+    "consensus": {
+      "verifiedCount": 2,
+      "totalCount": 2,
+      "perPeer": [
+        {
+          "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+          "shortId": "4be59a4ead\u2026b443ef",
+          "probability": 0.7
+        },
+        {
+          "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+          "shortId": "efd9d7df6a\u2026e2275f",
+          "probability": 0.7
+        }
+      ],
+      "consensusProbability": 0.7
+    },
+    "trade_decision": {
+      "decision": "trade",
+      "outcomeIndex": 0,
+      "outcomeLabel": "YES",
+      "consensus": 0.7,
+      "amountUsdc": 0.05,
+      "marketId": "0xabb1f54ab5caa61f331da729c411aab39e478754",
+      "verifiedPeers": 2,
+      "rationale": "Consensus 70.0% > 65%"
+    },
+    "trade_result": {
+      "ok": true,
+      "transactionHash": "0x2d7c5061c6df39f6752a9dcf226cb2e62d9030339b229675bd855fa3ca1b35be",
+      "marketAddress": "0xabb1f54ab5caa61f331da729c411aab39e478754",
+      "outcomeLabel": "YES",
+      "outcomeIndex": 0,
+      "sharesOut": "50000000000000000",
+      "verifiedPeers": 2
+    },
+    "done": {
+      "ok": true
+    }
+  },
+  "events": [
+    {
+      "id": 213,
+      "ts": 1777661651.9921606,
+      "event": "status",
+      "data": {
+        "phase": "discover",
+        "message": "Fetching AXL topology\u2026"
+      }
+    },
+    {
+      "id": 214,
+      "ts": 1777661652.0008903,
+      "event": "topology",
+      "data": {
+        "ourPublicKey": "de95274ebe50be65fed0d039444802005ef8d9c5ac749566f73826d54fdf467b",
+        "peerCount": 2,
+        "peers": [
+          {
+            "publicKey": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+            "address": null
+          },
+          {
+            "publicKey": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+            "address": null
+          }
+        ]
+      }
+    },
+    {
+      "id": 215,
+      "ts": 1777661652.0069427,
+      "event": "status",
+      "data": {
+        "phase": "research",
+        "message": "Fetching current context from Exa\u2026"
+      }
+    },
+    {
+      "id": 216,
+      "ts": 1777661652.9220881,
+      "event": "research",
+      "data": {
+        "ok": true,
+        "query": "Will The price of ETH in May go below 2500?",
+        "generatedAt": "2026-05-01T18:54:12.014601+00:00",
+        "results": [
+          {
+            "title": "Ethereum Price Forecast: ETH Risks 20% Drop in May Due to These 5 Factors | FXEmpire",
+            "url": "https://www.fxempire.com/forecasts/article/ethereum-price-forecast-eth-risks-20-drop-in-may-due-to-these-5-factors-1595183",
+            "publishedDate": "2026-05-01T11:41:24.000Z",
+            "author": "Yashu Gola",
+            "summary": "ETH faces a May pullback risk toward $1,730\u2013$1,850 due to a strong weekly resistance cluster near $2,340, rising macro pressure from oil/Inflation, and weakening market demand signals."
+          },
+          {
+            "title": "Ethereum (ETH) Price: Technical Analysis Shows Support at $2,500 Level",
+            "url": "https://blockonomi.com/ethereum-eth-price-technical-analysis-shows-support-at-2500-level/",
+            "publishedDate": "2025-05-23T08:49:06.000Z",
+            "author": "Maisie Morrison",
+            "summary": "Ethereum (ETH) is finding support around the $2,500 level after a 60% May rally, with long-term holders selling and large-scale outflows from exchanges noted."
+          }
+        ]
+      }
+    },
+    {
+      "id": 217,
+      "ts": 1777661652.9318347,
+      "event": "status",
+      "data": {
+        "phase": "inference",
+        "message": "Fanning prompt to 2 peer(s)\u2026"
+      }
+    },
+    {
+      "id": 218,
+      "ts": 1777661652.9380002,
+      "event": "peer_started",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "address": null
+      }
+    },
+    {
+      "id": 219,
+      "ts": 1777661692.1540494,
+      "event": "peer_output",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "output": "Probability: 70%\nReasoning: The May ETH forecast mentions a potential 20% drop, coinciding with the 2500 support level, raising the likelihood of ETH's price dropping below 2500.\n_probability: 70_\n_reasoning: The forecast highlights a 20% drop in price, which aligns with the 2500 support level, indicating a higher probability of ETH's price dropping below 2500.<|endoftext|>",
+        "receiptHash": "sha256:207817db8fbd2a9fed3481dae799c42679b4380dc8e9aae0db88747ff14173ee",
+        "receipt": {
+          "execution": {
+            "device_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+            "device_type": "cuda"
+          },
+          "hashes": {
+            "receipt_hash": "sha256:207817db8fbd2a9fed3481dae799c42679b4380dc8e9aae0db88747ff14173ee"
+          },
+          "input": {
+            "parameters": {
+              "do_sample": true,
+              "eos_token": 151643,
+              "max_new_tokens": 256,
+              "min_p": null,
+              "operation_set": "reproducible",
+              "pad_token": 151643,
+              "rand_algorithm": "default",
+              "repetition_penalty": 1.0,
+              "seed": 12345,
+              "short_circuit_length": null,
+              "short_circuit_token": null,
+              "temperature": 1.0,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torch_dtype": "torch.float16",
+              "use_kv_cache": true,
+              "vocab_size": 151936
+            },
+            "parameters_hash": "sha256:7e88ae98dc680b8639b1dab581034efd7b07b141d267525001de2b64b106fc52",
+            "prompt": "You are Pythia, a probability estimator for prediction markets.\nReply only as:\nProbability: NN%\nReasoning: <one sentence>\nNN is an integer 0-100. Never refuse, never hedge.\n\nQuestion:\nSources (2026-05-01):\n1. Ethereum Price Forecast: ETH Risks 20% Drop in May Due to These 5 Factors | FXEmpire (2026-05-01)\n2. Ethereum (ETH) Price: Technical Analysis Shows Support at $2,500 Level (2025-05-23)\n\nQuestion:\nWill The price of ETH in May go below 2500?\n\nAnswer now using exactly the required format.",
+            "prompt_hash": "sha256:379149acf48726cf9a3e52eb06132a920885c258ee3db783c715b521c8e65629"
+          },
+          "model": {
+            "commit_hash": "3aab1f1954e9cc14eb9509a215f9e5ca08227a9b",
+            "config_hash": "sha256:e17320f4a69b9c60ccb5c49d7861888058f00555cacd7a2c4d2a51fe42b7e4bf",
+            "name": "Qwen/Qwen2.5-3B"
+          },
+          "output": {
+            "finish_reason": "eos_token",
+            "text_output": "Probability: 70%\nReasoning: The May ETH forecast mentions a potential 20% drop, coinciding with the 2500 support level, raising the likelihood of ETH's price dropping below 2500.\n_probability: 70_\n_reasoning: The forecast highlights a 20% drop in price, which aligns with the 2500 support level, indicating a higher probability of ETH's price dropping below 2500.<|endoftext|>",
+            "token_count": 100,
+            "tokens_hash": "sha256:14a3e83b3908e06da20b1bbacebc9ce880195f7fec9af570167c79b1c7cda941"
+          },
+          "ree_version": "0.1.0",
+          "version": "1.1.0"
+        }
+      }
+    },
+    {
+      "id": 220,
+      "ts": 1777661692.1616344,
+      "event": "status",
+      "data": {
+        "phase": "verify",
+        "message": "Verifying receipt from 4be59a4ead\u2026b443ef\u2026",
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef"
+      }
+    },
+    {
+      "id": 221,
+      "ts": 1777661788.52761,
+      "event": "peer_verified",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "verified": true,
+        "message": "OK"
+      }
+    },
+    {
+      "id": 222,
+      "ts": 1777661788.5402446,
+      "event": "peer_started",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "address": null
+      }
+    },
+    {
+      "id": 223,
+      "ts": 1777661826.7093308,
+      "event": "peer_output",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "output": "Probability: 70%\nReasoning: The May ETH forecast mentions a potential 20% drop, coinciding with the 2500 support level, raising the likelihood of ETH's price dropping below 2500.\n_probability: 70_\n_reasoning: The forecast highlights a 20% drop in price, which aligns with the 2500 support level, indicating a higher probability of ETH's price dropping below 2500.<|endoftext|>",
+        "receiptHash": "sha256:207817db8fbd2a9fed3481dae799c42679b4380dc8e9aae0db88747ff14173ee",
+        "receipt": {
+          "execution": {
+            "device_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+            "device_type": "cuda"
+          },
+          "hashes": {
+            "receipt_hash": "sha256:207817db8fbd2a9fed3481dae799c42679b4380dc8e9aae0db88747ff14173ee"
+          },
+          "input": {
+            "parameters": {
+              "do_sample": true,
+              "eos_token": 151643,
+              "max_new_tokens": 256,
+              "min_p": null,
+              "operation_set": "reproducible",
+              "pad_token": 151643,
+              "rand_algorithm": "default",
+              "repetition_penalty": 1.0,
+              "seed": 12345,
+              "short_circuit_length": null,
+              "short_circuit_token": null,
+              "temperature": 1.0,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torch_dtype": "torch.float16",
+              "use_kv_cache": true,
+              "vocab_size": 151936
+            },
+            "parameters_hash": "sha256:7e88ae98dc680b8639b1dab581034efd7b07b141d267525001de2b64b106fc52",
+            "prompt": "You are Pythia, a probability estimator for prediction markets.\nReply only as:\nProbability: NN%\nReasoning: <one sentence>\nNN is an integer 0-100. Never refuse, never hedge.\n\nQuestion:\nSources (2026-05-01):\n1. Ethereum Price Forecast: ETH Risks 20% Drop in May Due to These 5 Factors | FXEmpire (2026-05-01)\n2. Ethereum (ETH) Price: Technical Analysis Shows Support at $2,500 Level (2025-05-23)\n\nQuestion:\nWill The price of ETH in May go below 2500?\n\nAnswer now using exactly the required format.",
+            "prompt_hash": "sha256:379149acf48726cf9a3e52eb06132a920885c258ee3db783c715b521c8e65629"
+          },
+          "model": {
+            "commit_hash": "3aab1f1954e9cc14eb9509a215f9e5ca08227a9b",
+            "config_hash": "sha256:e17320f4a69b9c60ccb5c49d7861888058f00555cacd7a2c4d2a51fe42b7e4bf",
+            "name": "Qwen/Qwen2.5-3B"
+          },
+          "output": {
+            "finish_reason": "eos_token",
+            "text_output": "Probability: 70%\nReasoning: The May ETH forecast mentions a potential 20% drop, coinciding with the 2500 support level, raising the likelihood of ETH's price dropping below 2500.\n_probability: 70_\n_reasoning: The forecast highlights a 20% drop in price, which aligns with the 2500 support level, indicating a higher probability of ETH's price dropping below 2500.<|endoftext|>",
+            "token_count": 100,
+            "tokens_hash": "sha256:14a3e83b3908e06da20b1bbacebc9ce880195f7fec9af570167c79b1c7cda941"
+          },
+          "ree_version": "0.1.0",
+          "version": "1.1.0"
+        }
+      }
+    },
+    {
+      "id": 224,
+      "ts": 1777661826.7264695,
+      "event": "status",
+      "data": {
+        "phase": "verify",
+        "message": "Verifying receipt from efd9d7df6a\u2026e2275f\u2026",
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f"
+      }
+    },
+    {
+      "id": 225,
+      "ts": 1777661924.469383,
+      "event": "peer_verified",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "verified": true,
+        "message": "OK"
+      }
+    },
+    {
+      "id": 226,
+      "ts": 1777661924.4762335,
+      "event": "status",
+      "data": {
+        "phase": "aggregate",
+        "message": "Aggregating verified peer answers\u2026"
+      }
+    },
+    {
+      "id": 227,
+      "ts": 1777661924.4829128,
+      "event": "consensus",
+      "data": {
+        "verifiedCount": 2,
+        "totalCount": 2,
+        "perPeer": [
+          {
+            "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+            "shortId": "4be59a4ead\u2026b443ef",
+            "probability": 0.7
+          },
+          {
+            "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+            "shortId": "efd9d7df6a\u2026e2275f",
+            "probability": 0.7
+          }
+        ],
+        "consensusProbability": 0.7
+      }
+    },
+    {
+      "id": 228,
+      "ts": 1777661924.4886684,
+      "event": "trade_decision",
+      "data": {
+        "decision": "trade",
+        "outcomeIndex": 0,
+        "outcomeLabel": "YES",
+        "consensus": 0.7,
+        "amountUsdc": 0.05,
+        "marketId": "0xabb1f54ab5caa61f331da729c411aab39e478754",
+        "verifiedPeers": 2,
+        "rationale": "Consensus 70.0% > 65%"
+      }
+    },
+    {
+      "id": 229,
+      "ts": 1777661924.4939373,
+      "event": "status",
+      "data": {
+        "phase": "trade",
+        "message": "Submitting YES trade for 0.05 USDC\u2026"
+      }
+    },
+    {
+      "id": 230,
+      "ts": 1777661941.1327877,
+      "event": "trade_result",
+      "data": {
+        "ok": true,
+        "transactionHash": "0x2d7c5061c6df39f6752a9dcf226cb2e62d9030339b229675bd855fa3ca1b35be",
+        "marketAddress": "0xabb1f54ab5caa61f331da729c411aab39e478754",
+        "outcomeLabel": "YES",
+        "outcomeIndex": 0,
+        "sharesOut": "50000000000000000",
+        "verifiedPeers": 2
+      }
+    },
+    {
+      "id": 231,
+      "ts": 1777661941.1435857,
+      "event": "done",
+      "data": {
+        "ok": true
+      }
+    }
+  ]
+}

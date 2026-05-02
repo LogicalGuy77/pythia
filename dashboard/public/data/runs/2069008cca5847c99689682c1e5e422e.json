@@ -1,0 +1,400 @@
+{
+  "id": "2069008cca5847c99689682c1e5e422e",
+  "createdAt": 1777295836.2778988,
+  "updatedAt": 1777296157.281189,
+  "status": "completed",
+  "prompt": "will there be >2000 Wild Pandas at end of 2026",
+  "marketId": "0xf8022b5c02ab07ad52c3067a70578aa639483697",
+  "amountUsdc": 0.05,
+  "minVerifiedPeers": 2,
+  "verify": true,
+  "summary": {
+    "research": {
+      "ok": true,
+      "query": "will there be >2000 Wild Pandas at end of 2026",
+      "generatedAt": "2026-04-27T13:17:16.303058+00:00",
+      "results": [
+        {
+          "title": "Giant Panda Population by Country 2026",
+          "url": "https://worldpopulationreview.com/country-rankings/giant-panda-population-by-country",
+          "publishedDate": "2026-03-25T13:56:27.000Z",
+          "author": null,
+          "summary": "Global wild giant panda population is 1,864 (all in China), with 1,926 total pandas including 66 in captivity abroad; China hosts the vast majority within Sichuan sanctuaries, while other countries hold a small number on loan for conservation."
+        },
+        {
+          "title": "How Many Pandas Are Left By 2026? Captive Pandas Population",
+          "url": "https://chuanxpanda.com/blogs/news/how-many-pandas-are-left-by-2025",
+          "publishedDate": "2025-11-24T10:42:55.000Z",
+          "author": null,
+          "summary": "As of late 2025, there were about 2,708 giant pandas globally, with 808 in captivity and around 1,900 in the wild, highlighting ongoing conservation progress but continued risks from genetic isolation and low reproductive rates."
+        }
+      ]
+    },
+    "consensus": {
+      "verifiedCount": 2,
+      "totalCount": 2,
+      "perPeer": [
+        {
+          "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+          "shortId": "efd9d7df6a\u2026e2275f",
+          "probability": 0.7
+        },
+        {
+          "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+          "shortId": "4be59a4ead\u2026b443ef",
+          "probability": 0.7
+        }
+      ],
+      "consensusProbability": 0.7
+    },
+    "trade_decision": {
+      "decision": "trade",
+      "outcomeIndex": 0,
+      "outcomeLabel": "YES",
+      "consensus": 0.7,
+      "amountUsdc": 0.05,
+      "marketId": "0xf8022b5c02ab07ad52c3067a70578aa639483697",
+      "verifiedPeers": 2,
+      "rationale": "Consensus 70.0% > 65%"
+    },
+    "trade_result": {
+      "ok": true,
+      "transactionHash": "0xe59bf07940c82cfd8615cdd66207848aeb6c114d51e839bdd667c5c0cc43ece6",
+      "marketAddress": "0xf8022b5c02ab07ad52c3067a70578aa639483697",
+      "outcomeLabel": "YES",
+      "outcomeIndex": 0,
+      "sharesOut": "50000000000000000",
+      "verifiedPeers": 2
+    },
+    "done": {
+      "ok": true
+    }
+  },
+  "events": [
+    {
+      "id": 87,
+      "ts": 1777295836.2847204,
+      "event": "status",
+      "data": {
+        "phase": "discover",
+        "message": "Fetching AXL topology\u2026"
+      }
+    },
+    {
+      "id": 88,
+      "ts": 1777295836.2922945,
+      "event": "topology",
+      "data": {
+        "ourPublicKey": "de95274ebe50be65fed0d039444802005ef8d9c5ac749566f73826d54fdf467b",
+        "peerCount": 2,
+        "peers": [
+          {
+            "publicKey": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+            "address": null
+          },
+          {
+            "publicKey": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+            "address": null
+          }
+        ]
+      }
+    },
+    {
+      "id": 89,
+      "ts": 1777295836.2977293,
+      "event": "status",
+      "data": {
+        "phase": "research",
+        "message": "Fetching current context from Exa\u2026"
+      }
+    },
+    {
+      "id": 90,
+      "ts": 1777295836.7614226,
+      "event": "research",
+      "data": {
+        "ok": true,
+        "query": "will there be >2000 Wild Pandas at end of 2026",
+        "generatedAt": "2026-04-27T13:17:16.303058+00:00",
+        "results": [
+          {
+            "title": "Giant Panda Population by Country 2026",
+            "url": "https://worldpopulationreview.com/country-rankings/giant-panda-population-by-country",
+            "publishedDate": "2026-03-25T13:56:27.000Z",
+            "author": null,
+            "summary": "Global wild giant panda population is 1,864 (all in China), with 1,926 total pandas including 66 in captivity abroad; China hosts the vast majority within Sichuan sanctuaries, while other countries hold a small number on loan for conservation."
+          },
+          {
+            "title": "How Many Pandas Are Left By 2026? Captive Pandas Population",
+            "url": "https://chuanxpanda.com/blogs/news/how-many-pandas-are-left-by-2025",
+            "publishedDate": "2025-11-24T10:42:55.000Z",
+            "author": null,
+            "summary": "As of late 2025, there were about 2,708 giant pandas globally, with 808 in captivity and around 1,900 in the wild, highlighting ongoing conservation progress but continued risks from genetic isolation and low reproductive rates."
+          }
+        ]
+      }
+    },
+    {
+      "id": 91,
+      "ts": 1777295836.770572,
+      "event": "status",
+      "data": {
+        "phase": "inference",
+        "message": "Fanning prompt to 2 peer(s)\u2026"
+      }
+    },
+    {
+      "id": 92,
+      "ts": 1777295836.7770724,
+      "event": "peer_started",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "address": null
+      }
+    },
+    {
+      "id": 93,
+      "ts": 1777295877.6302452,
+      "event": "peer_output",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "output": "probability: 70%\nreasoning: The World Wildlife Fund forecasts a sharp decline in wild panda populations by the end of 2026, and the 2025 statistics show a significant decrease in the number of pandas remaining. Factors like habitat loss, poaching, and conflict with humans are major causes of this decline.\n\nprobability: 60%\nreasoning: Despite increased efforts to protect pandas, like the creation of the Gomei National Park and continued conservation projects worldwide, many factors still contribute to the decline in wild panda populations. Pandas reproduce slowly and have complex mating needs, which can make it challenging to keep the populations stable.<|endoftext|>",
+        "receiptHash": "sha256:e13504828ea975e2e6c64c397b14e6a10691884f4c86f2585d4f23f2de1971e1",
+        "receipt": {
+          "execution": {
+            "device_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+            "device_type": "cuda"
+          },
+          "hashes": {
+            "receipt_hash": "sha256:e13504828ea975e2e6c64c397b14e6a10691884f4c86f2585d4f23f2de1971e1"
+          },
+          "input": {
+            "parameters": {
+              "do_sample": true,
+              "eos_token": 151643,
+              "max_new_tokens": 256,
+              "min_p": null,
+              "operation_set": "reproducible",
+              "pad_token": 151643,
+              "rand_algorithm": "default",
+              "repetition_penalty": 1.0,
+              "seed": 12345,
+              "short_circuit_length": null,
+              "short_circuit_token": null,
+              "temperature": 1.0,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torch_dtype": "torch.float16",
+              "use_kv_cache": true,
+              "vocab_size": 151936
+            },
+            "parameters_hash": "sha256:7e88ae98dc680b8639b1dab581034efd7b07b141d267525001de2b64b106fc52",
+            "prompt": "You are Pythia, a probability estimator for prediction markets.\nReply only as:\nProbability: NN%\nReasoning: <one sentence>\nNN is an integer 0-100. Never refuse, never hedge.\n\nQuestion:\nSources (2026-04-27):\n1. Giant Panda Population by Country 2026 (2026-03-25)\n2. How Many Pandas Are Left By 2026? Captive Pandas Population (2025-11-24)\n\nQuestion:\nwill there be >2000 Wild Pandas at end of 2026\n\nAnswer now using exactly the required format.",
+            "prompt_hash": "sha256:af0c0f4d7eff9d2f2a3b5e3183ccc05b102d81f8017be725874d1dff6844d91e"
+          },
+          "model": {
+            "commit_hash": "3aab1f1954e9cc14eb9509a215f9e5ca08227a9b",
+            "config_hash": "sha256:e17320f4a69b9c60ccb5c49d7861888058f00555cacd7a2c4d2a51fe42b7e4bf",
+            "name": "Qwen/Qwen2.5-3B"
+          },
+          "output": {
+            "finish_reason": "eos_token",
+            "text_output": "probability: 70%\nreasoning: The World Wildlife Fund forecasts a sharp decline in wild panda populations by the end of 2026, and the 2025 statistics show a significant decrease in the number of pandas remaining. Factors like habitat loss, poaching, and conflict with humans are major causes of this decline.\n\nprobability: 60%\nreasoning: Despite increased efforts to protect pandas, like the creation of the Gomei National Park and continued conservation projects worldwide, many factors still contribute to the decline in wild panda populations. Pandas reproduce slowly and have complex mating needs, which can make it challenging to keep the populations stable.<|endoftext|>",
+            "token_count": 135,
+            "tokens_hash": "sha256:c3841f3186c60b74642096d34e52922decaa4aad8e3be88999d2e2fea8d23250"
+          },
+          "ree_version": "0.1.0",
+          "version": "1.1.0"
+        }
+      }
+    },
+    {
+      "id": 94,
+      "ts": 1777295877.6368287,
+      "event": "status",
+      "data": {
+        "phase": "verify",
+        "message": "Verifying receipt from efd9d7df6a\u2026e2275f\u2026",
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f"
+      }
+    },
+    {
+      "id": 95,
+      "ts": 1777295985.0811572,
+      "event": "peer_verified",
+      "data": {
+        "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+        "shortId": "efd9d7df6a\u2026e2275f",
+        "verified": true,
+        "message": "OK"
+      }
+    },
+    {
+      "id": 96,
+      "ts": 1777295985.0888562,
+      "event": "peer_started",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "address": null
+      }
+    },
+    {
+      "id": 97,
+      "ts": 1777296032.5439322,
+      "event": "peer_output",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "output": "probability: 70%\nreasoning: The World Wildlife Fund forecasts a sharp decline in wild panda populations by the end of 2026, and the 2025 statistics show a significant decrease in the number of pandas remaining. Factors like habitat loss, poaching, and conflict with humans are major causes of this decline.\n\nprobability: 60%\nreasoning: Despite increased efforts to protect pandas, like the creation of the Gomei National Park and continued conservation projects worldwide, many factors still contribute to the decline in wild panda populations. Pandas reproduce slowly and have complex mating needs, which can make it challenging to keep the populations stable.<|endoftext|>",
+        "receiptHash": "sha256:e13504828ea975e2e6c64c397b14e6a10691884f4c86f2585d4f23f2de1971e1",
+        "receipt": {
+          "execution": {
+            "device_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+            "device_type": "cuda"
+          },
+          "hashes": {
+            "receipt_hash": "sha256:e13504828ea975e2e6c64c397b14e6a10691884f4c86f2585d4f23f2de1971e1"
+          },
+          "input": {
+            "parameters": {
+              "do_sample": true,
+              "eos_token": 151643,
+              "max_new_tokens": 256,
+              "min_p": null,
+              "operation_set": "reproducible",
+              "pad_token": 151643,
+              "rand_algorithm": "default",
+              "repetition_penalty": 1.0,
+              "seed": 12345,
+              "short_circuit_length": null,
+              "short_circuit_token": null,
+              "temperature": 1.0,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torch_dtype": "torch.float16",
+              "use_kv_cache": true,
+              "vocab_size": 151936
+            },
+            "parameters_hash": "sha256:7e88ae98dc680b8639b1dab581034efd7b07b141d267525001de2b64b106fc52",
+            "prompt": "You are Pythia, a probability estimator for prediction markets.\nReply only as:\nProbability: NN%\nReasoning: <one sentence>\nNN is an integer 0-100. Never refuse, never hedge.\n\nQuestion:\nSources (2026-04-27):\n1. Giant Panda Population by Country 2026 (2026-03-25)\n2. How Many Pandas Are Left By 2026? Captive Pandas Population (2025-11-24)\n\nQuestion:\nwill there be >2000 Wild Pandas at end of 2026\n\nAnswer now using exactly the required format.",
+            "prompt_hash": "sha256:af0c0f4d7eff9d2f2a3b5e3183ccc05b102d81f8017be725874d1dff6844d91e"
+          },
+          "model": {
+            "commit_hash": "3aab1f1954e9cc14eb9509a215f9e5ca08227a9b",
+            "config_hash": "sha256:e17320f4a69b9c60ccb5c49d7861888058f00555cacd7a2c4d2a51fe42b7e4bf",
+            "name": "Qwen/Qwen2.5-3B"
+          },
+          "output": {
+            "finish_reason": "eos_token",
+            "text_output": "probability: 70%\nreasoning: The World Wildlife Fund forecasts a sharp decline in wild panda populations by the end of 2026, and the 2025 statistics show a significant decrease in the number of pandas remaining. Factors like habitat loss, poaching, and conflict with humans are major causes of this decline.\n\nprobability: 60%\nreasoning: Despite increased efforts to protect pandas, like the creation of the Gomei National Park and continued conservation projects worldwide, many factors still contribute to the decline in wild panda populations. Pandas reproduce slowly and have complex mating needs, which can make it challenging to keep the populations stable.<|endoftext|>",
+            "token_count": 135,
+            "tokens_hash": "sha256:c3841f3186c60b74642096d34e52922decaa4aad8e3be88999d2e2fea8d23250"
+          },
+          "ree_version": "0.1.0",
+          "version": "1.1.0"
+        }
+      }
+    },
+    {
+      "id": 98,
+      "ts": 1777296032.553076,
+      "event": "status",
+      "data": {
+        "phase": "verify",
+        "message": "Verifying receipt from 4be59a4ead\u2026b443ef\u2026",
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef"
+      }
+    },
+    {
+      "id": 99,
+      "ts": 1777296141.2296865,
+      "event": "peer_verified",
+      "data": {
+        "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+        "shortId": "4be59a4ead\u2026b443ef",
+        "verified": true,
+        "message": "OK"
+      }
+    },
+    {
+      "id": 100,
+      "ts": 1777296141.2368047,
+      "event": "status",
+      "data": {
+        "phase": "aggregate",
+        "message": "Aggregating verified peer answers\u2026"
+      }
+    },
+    {
+      "id": 101,
+      "ts": 1777296141.2432764,
+      "event": "consensus",
+      "data": {
+        "verifiedCount": 2,
+        "totalCount": 2,
+        "perPeer": [
+          {
+            "peerId": "efd9d7df6aaa0b34a8b58c5b862fd42e47b9421b4854ece8650e5c00dae2275f",
+            "shortId": "efd9d7df6a\u2026e2275f",
+            "probability": 0.7
+          },
+          {
+            "peerId": "4be59a4ead4ebb57885f2ea05e22ca9a94546f6b71955a0b3806a6860ab443ef",
+            "shortId": "4be59a4ead\u2026b443ef",
+            "probability": 0.7
+          }
+        ],
+        "consensusProbability": 0.7
+      }
+    },
+    {
+      "id": 102,
+      "ts": 1777296141.249038,
+      "event": "trade_decision",
+      "data": {
+        "decision": "trade",
+        "outcomeIndex": 0,
+        "outcomeLabel": "YES",
+        "consensus": 0.7,
+        "amountUsdc": 0.05,
+        "marketId": "0xf8022b5c02ab07ad52c3067a70578aa639483697",
+        "verifiedPeers": 2,
+        "rationale": "Consensus 70.0% > 65%"
+      }
+    },
+    {
+      "id": 103,
+      "ts": 1777296141.2549407,
+      "event": "status",
+      "data": {
+        "phase": "trade",
+        "message": "Submitting YES trade for 0.05 USDC\u2026"
+      }
+    },
+    {
+      "id": 104,
+      "ts": 1777296157.2626467,
+      "event": "trade_result",
+      "data": {
+        "ok": true,
+        "transactionHash": "0xe59bf07940c82cfd8615cdd66207848aeb6c114d51e839bdd667c5c0cc43ece6",
+        "marketAddress": "0xf8022b5c02ab07ad52c3067a70578aa639483697",
+        "outcomeLabel": "YES",
+        "outcomeIndex": 0,
+        "sharesOut": "50000000000000000",
+        "verifiedPeers": 2
+      }
+    },
+    {
+      "id": 105,
+      "ts": 1777296157.2729504,
+      "event": "done",
+      "data": {
+        "ok": true
+      }
+    }
+  ]
+}
